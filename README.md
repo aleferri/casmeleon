@@ -28,17 +28,17 @@ casm definition language bnf
 
      <definition> ::= { <numeric format> | <opcode definition> | <enum definition> }
 
-     <numeric format> ::= .number <number base> <position> <single quoted string> '\n'
+     <numeric format> ::= '.number' <number base> <position> <single quoted string> '\n'
 
-     <number base> ::= .hex | .bin | .oct | .dec
+     <number base> ::= '.hex' | '.bin' | '.oct' | '.dec'
 
-     <position> ::= prefix | suffix
+     <position> ::= 'prefix' | 'suffix'
 
-     <enum definition> ::= .enum <identifier> '{' <identifier list> '}';
+     <enum definition> ::= '.enum' <identifier> '{' <identifier list> '}';
 
      <identifier list> ::= <identifier> [, <identifier list>]
 
-     <opcode definition> ::= .opcode <identifier> <syntax definition> -> <block>
+     <opcode definition> ::= '.opcode' <identifier> <syntax definition> '->' <block>
 
      <syntax definition> ::= ε | <arg format>
 
@@ -52,7 +52,7 @@ casm definition language bnf
 
      <statement> ::= <deposit> <expression> | <if statement> | <error statement> | <loop statement>  
 
-     <deposit> ::= .db | .dw | .dd
+     <deposit> ::= '.db' | '.dw' | '.dd'
 
      <expression> ::= <operand> | <operator> <expression> | <expression> <operator> <expression> | '(' <expression> ')'
 
@@ -60,11 +60,11 @@ casm definition language bnf
 
      <operator> ::= '+' | '-' | '/' | '%' | '*' | '>>' | '<<' | '&' | '|' | '^' | '~' | '&&' | '||' | '!=' | '!' | '==' | '>' | '<' | '<=' | '>=' | .in
 
-     <if statement> ::= if <expression> <block> [ else <block> ]
+     <if statement> ::= 'if' <expression> <block> [ 'else' <block> ]
 
-     <error statement> ::= .error <source> <double quoted string>
+     <error statement> ::= '.error' <source> <double quoted string>
 
-     <loop statement> ::= for <identifier> until <expression> <deposit> <expression>
+     <loop statement> ::= 'for' <identifier> 'until' <expression> <deposit> <expression>
 
      <source> ::= <identifier>
 
@@ -80,21 +80,21 @@ casm definition language bnf
 
      <number> ::= <binary number> | <decimal number> | <octal number> | <hexadecimal number>
 
-     <binary number> ::= 0b { <binary digit> }
+     <binary number> ::= '0b' { <binary digit> }
 
-     <binary digit> ::= 0 | 1
+     <binary digit> ::= '0' | '1'
 
      <decimal number> ::= { <decimal digit> }
 
-     <decimal digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+     <decimal digit> ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
-     <octal number> ::= 0o { <octal digit> }
+     <octal number> ::= '0o' { <octal digit> }
 
-     <octal digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
+     <octal digit> ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7'
 
-     <hexadecimal number> ::= 0x { <hexadecimal digit> }
+     <hexadecimal number> ::= '0x' { <hexadecimal digit> }
 
-     <hexadecimal digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | A | B | C | D | E | F | a | b | c | d | e | f
+     <hexadecimal digit> ::= <decimal digit> | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
 
      <identifier> ::= <char> { <char> | <decimal digit> }
 
@@ -120,7 +120,7 @@ Some example:
 
     //add immediate  
     .opcode add #imm8 -> {  
-        if imm8 \> 255 {  
+        if imm8 > 255 {  
             .error imm8 "immediate must be less than 256";  
         }  
         .db 0x10;  
