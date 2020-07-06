@@ -113,51 +113,52 @@ This is their precedence:
  
 Some example:  
 
-//org implementation example  
-.opcode org addr -> {  
-    for i until addr do 0; //i start from this_address and loop until the desired address padding with 0  
-}  
-
-//add immediate  
-.opcode add #imm8 -> {  
-    if imm8 \> 255 {  
-        .error imm8 "immediate must be less than 256";  
+    //org implementation example  
+    .opcode org addr -> {  
+        for i until addr db 0; //i start from this_address and loop until the desired address padding with 0  
     }  
-    .db 0x10;  
-    .db imm8;  
-}  
-//opcode format would be add <space> hash value, so add # 26 would be ok as add #12  
 
-//this syntax can also be used for meta-opcode, example:  
-.opcode db imm8 -> {  
-    .db imm8;  
-} //db now deposit values in the program  
+    //add immediate  
+    .opcode add #imm8 -> {  
+        if imm8 \> 255 {  
+            .error imm8 "immediate must be less than 256";  
+        }  
+        .db 0x10;  
+        .db imm8;  
+    }  
+    //space after symbols are stripped, so "add # 26" is the same as "add #26"  
 
-//number format  
-.number .hex suffix 'h' //in the user program all number ending with h are hexadecimal  
+    //this syntax can also be used for meta-opcode, example:  
+    .opcode db imm8 -> {  
+        .db imm8;  
+    } //db now deposit values in the program  
+
+    //number format  
+    .number .hex suffix 'h' //in the user program all number ending with h are hexadecimal  
 
 Program file is a list of labels and opcodes, labels are local or global  
 Local labels are normal labels with '.' prefix so .done is a local label  
 Local labels can be called outside their scope, example:  
-_f1:  
-    ...  
-.loop:  
-    ...  
-.ret:  
-    ret  
+
+     _f1:  
+        ...  
+    .loop:  
+        ...  
+    .ret:  
+        ret  
   
-_f2:  
-    jmp _f1.loop  
+    _f2:  
+        jmp _f1.loop  
 
 Include file example:
 
-.include "fileName.s"  
+    .include "fileName.s"  
 
-Comment marker for program is semicolon ';'
+Comment marker for user program is semicolon ';'
 
 Flags and usage
 
 casmeleon.exe -lang=lang-name -debug=true/false file  
 debug flag is optional  
 output file name is file - extension + .bin  
-debug cause the individual opcode to be printed to video in the form address: opcode-name expanded args -> list of bytes
+debug cause the individual opcode to be print to video in the form address: opcode-name expanded args -> list of bytes
