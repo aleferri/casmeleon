@@ -26,77 +26,77 @@ The assembler require a least 2 files: a definition of the language in .casm fil
 
 casm definition language bnf
 
-<definition> ::= { <numeric format> | <opcode definition> | <enum definition> }
+     <definition> ::= { <numeric format> | <opcode definition> | <enum definition> }
 
-<numeric format> ::= .number <number base> <position> <single quoted string> '\n'
+     <numeric format> ::= .number <number base> <position> <single quoted string> '\n'
 
-<number base> ::= .hex | .bin | .oct | .dec
+     <number base> ::= .hex | .bin | .oct | .dec
 
-<position> ::= prefix | suffix
+     <position> ::= prefix | suffix
 
-<enum definition> ::= .enum <identifier> '{' <identifier list> '}';
+     <enum definition> ::= .enum <identifier> '{' <identifier list> '}';
 
-<identifier list> ::= <identifier> [, <identifier list>]
+     <identifier list> ::= <identifier> [, <identifier list>]
 
-<opcode definition> ::= .opcode <identifier> <syntax definition> -> <block>
+     <opcode definition> ::= .opcode <identifier> <syntax definition> -> <block>
 
-<syntax definition> ::= ε | <arg format>
+     <syntax definition> ::= ε | <arg format>
 
-<arg format> ::= { <symbol> | <arg> | <number> }
+     <arg format> ::= { <symbol> | <arg> | <number> }
 
-<arg> ::= <identifier>
+     <arg> ::= <identifier>
 
-<block> ::= '{' <statement list> '}'
+     <block> ::= '{' <statement list> '}'
 
-<statement list> ::= <statement>; [<statement list>]
+     <statement list> ::= <statement>; [<statement list>]
 
-<statement> ::= <deposit> <expression> | <if statement> | <error statement> | <loop statement>  
+     <statement> ::= <deposit> <expression> | <if statement> | <error statement> | <loop statement>  
 
-<deposit> ::= .db | .dw | .dd
+     <deposit> ::= .db | .dw | .dd
 
-<expression> ::= <operand> | <operator> <expression> | <expression> <operator> <expression> | '(' <expression> ')'
+     <expression> ::= <operand> | <operator> <expression> | <expression> <operator> <expression> | '(' <expression> ')'
 
-<operand> ::= <number> | <identifier>
+     <operand> ::= <number> | <identifier>
 
-<operator> ::= '+' | '-' | '/' | '%' | '*' | '>>' | '<<' | '&' | '|' | '^' | '~' | '&&' | '||' | '!=' | '!' | '==' | '>' | '<' | '<=' | '>=' | .in
+     <operator> ::= '+' | '-' | '/' | '%' | '*' | '>>' | '<<' | '&' | '|' | '^' | '~' | '&&' | '||' | '!=' | '!' | '==' | '>' | '<' | '<=' | '>=' | .in
 
-<if statement> ::= if <expression> <block> [ else <block> ]
+     <if statement> ::= if <expression> <block> [ else <block> ]
 
-<error statement> ::= .error <source> <double quoted string>
+     <error statement> ::= .error <source> <double quoted string>
 
-<loop statement> ::= for <identifier> until <expression> <deposit> <expression>
+     <loop statement> ::= for <identifier> until <expression> <deposit> <expression>
 
-<source> ::= <identifier>
+     <source> ::= <identifier>
 
-<single quoted string> ::= "'" <string> "'"
+     <single quoted string> ::= "'" <string> "'"
 
-<double quoted string> ::= "\\"" <string> "\\""
+     <double quoted string> ::= "\\"" <string> "\\""
 
-<string> ::= { . }
+     <string> ::= { . }
 
-<symbol> ::= <separator> | <operator>
+     <symbol> ::= <separator> | <operator>
 
-<separator> ::= '(' | ')' | '[' | ']' | '{' | '}' | ',' | '@' | '$' | ';' | '#'
+     <separator> ::= '(' | ')' | '[' | ']' | '{' | '}' | ',' | '@' | '$' | ';' | '#'
 
-<number> ::= <binary number> | <decimal number> | <octal number> | <hexadecimal number>
+     <number> ::= <binary number> | <decimal number> | <octal number> | <hexadecimal number>
 
-<binary number> ::= 0b { <binary digit> }
+     <binary number> ::= 0b { <binary digit> }
 
-<binary digit> ::= 0 | 1
+     <binary digit> ::= 0 | 1
 
-<decimal number> ::= { <decimal digit> }
+     <decimal number> ::= { <decimal digit> }
 
-<decimal digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+     <decimal digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
-<octal number> ::= 0o { <octal digit> }
+     <octal number> ::= 0o { <octal digit> }
 
-<octal digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
+     <octal digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
 
-<hexadecimal number> ::= 0x { <hexadecimal digit> }
+     <hexadecimal number> ::= 0x { <hexadecimal digit> }
 
-<hexadecimal digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | A | B | C | D | E | F | a | b | c | d | e | f
+     <hexadecimal digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | A | B | C | D | E | F | a | b | c | d | e | f
 
-<identifier> ::= <char> { <char> | <decimal digit> }
+     <identifier> ::= <char> { <char> | <decimal digit> }
 
 char is anything that is not a separator an operator or a digit
 
