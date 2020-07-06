@@ -1,0 +1,18 @@
+
+test:
+.reset:
+    and zero
+    add .n
+    sta .r
+    add .n
+    sta .r
+    sta port_4
+    add port_1
+    sta port_1, .n
+.wait:
+    jmp .wait
+    
+.r: rb
+.n: db 10
+str: db "Hello, world!", 0Ah, 0Dh, 0h ; equal to "Hello, world!\n\r\0"
+zero: db 0

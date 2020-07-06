@@ -1,0 +1,10 @@
+
+.include "../testing/test_include_fail.txt"
+;should fail
+
+reset:
+    add 4
+    and 6
+    sta 12
+endless:
+    jmp endless

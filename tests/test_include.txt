@@ -1,0 +1,9 @@
+
+reset:
+    add 4
+    and 6
+    sta 12
+endless:
+    jmp endless
+
+.include "../testing/test.txt"

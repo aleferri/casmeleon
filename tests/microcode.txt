@@ -1,0 +1,5 @@
+
+;rst ld sel_test mask wr ldflag sel_bus sel_reg ld_rh ld_rl ld_dh ld_dl ld_arh ld_arl sel_mem
+fetch_0: dw 0 0 0    0 0 0 R   PCL 0 0 0 0 1 1 0 ; PC -> AR
+fetch_1: dw 0 0 0    0 0 0 ARi Z   0 0 1 0 1 1 0 ; AR + 1 -> AR || MEM -> IR || Z -> DH
+fetch_2: dw 0 1 true 0 0 0 Ari PCL 1 1 0 1 1 1 1 ; AR + 1 -> PC, AR || MEM -> DR || JUMP IR
