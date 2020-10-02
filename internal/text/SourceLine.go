@@ -1,7 +1,7 @@
 package text
 
 import (
-	"bitbucket.org/mrpink95/casmeleon/internal/ui"
+	"github.com/aleferri/casmeleon/internal/ui"
 	"unicode/utf8"
 )
 

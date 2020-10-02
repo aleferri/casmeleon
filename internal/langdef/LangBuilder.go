@@ -1,8 +1,8 @@
 package langdef
 
 import (
-	"bitbucket.org/mrpink95/casmeleon/internal/parsing"
-	"bitbucket.org/mrpink95/casmeleon/internal/text"
+	"github.com/aleferri/casmeleon/internal/parsing"
+	"github.com/aleferri/casmeleon/internal/text"
 	"sort"
 	"strings"
 )

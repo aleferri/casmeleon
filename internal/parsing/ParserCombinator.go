@@ -1,7 +1,7 @@
 package parsing
 
 import (
-	"bitbucket.org/mrpink95/casmeleon/internal/text"
+	"github.com/aleferri/casmeleon/internal/text"
 	"strings"
 )
 

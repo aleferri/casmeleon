@@ -1,9 +1,9 @@
 package langdef
 
 import (
-	"bitbucket.org/mrpink95/casmeleon/internal/parsing"
-	"bitbucket.org/mrpink95/casmeleon/internal/text"
-	"bitbucket.org/mrpink95/casmeleon/internal/ui"
+	"github.com/aleferri/casmeleon/internal/parsing"
+	"github.com/aleferri/casmeleon/internal/text"
+	"github.com/aleferri/casmeleon/internal/ui"
 )
 
 //LangParserState is a configurable ParseState that can skip the EOL

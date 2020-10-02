@@ -1,6 +1,6 @@
 package parsing
 
-import "bitbucket.org/mrpink95/casmeleon/internal/text"
+import "github.com/aleferri/casmeleon/internal/text"
 
 //Defaults for tags
 const (

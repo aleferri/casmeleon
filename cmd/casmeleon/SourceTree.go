@@ -1,10 +1,10 @@
 package main
 
 import (
-	"bitbucket.org/mrpink95/casmeleon/internal/langdef"
-	"bitbucket.org/mrpink95/casmeleon/internal/parsing"
-	"bitbucket.org/mrpink95/casmeleon/internal/text"
-	"bitbucket.org/mrpink95/casmeleon/internal/ui"
+	"github.org/mrpink95/casmeleon/internal/langdef"
+	"github.org/mrpink95/casmeleon/internal/parsing"
+	"github.org/mrpink95/casmeleon/internal/text"
+	"github.org/mrpink95/casmeleon/internal/ui"
 )
 
 //ASMSource is an interface to every type of source like not-yet-included source or opcode list

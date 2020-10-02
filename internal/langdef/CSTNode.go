@@ -1,6 +1,6 @@
 package langdef
 
-import "bitbucket.org/mrpink95/casmeleon/internal/text"
+import "github.com/aleferri/casmeleon/internal/text"
 
 //CSTNode is a Concrete Syntax Tree node built by the parser
 type CSTNode struct {

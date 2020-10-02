@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bitbucket.org/mrpink95/casmeleon/internal/langdef"
-	"bitbucket.org/mrpink95/casmeleon/internal/parsing"
-	"bitbucket.org/mrpink95/casmeleon/internal/text"
+	"github.com/aleferri/casmeleon/internal/langdef"
+	"github.com/aleferri/casmeleon/internal/parsing"
+	"github.com/aleferri/casmeleon/internal/text"
 	"path/filepath"
 	"strings"
 )

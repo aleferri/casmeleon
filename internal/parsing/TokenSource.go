@@ -1,9 +1,9 @@
 package parsing
 
 import (
-	"bitbucket.org/mrpink95/casmeleon/internal/lexing"
-	"bitbucket.org/mrpink95/casmeleon/internal/text"
-	"bitbucket.org/mrpink95/casmeleon/internal/ui"
+	"github.com/aleferri/casmeleon/internal/lexing"
+	"github.com/aleferri/casmeleon/internal/text"
+	"github.com/aleferri/casmeleon/internal/ui"
 	"io"
 )
 
