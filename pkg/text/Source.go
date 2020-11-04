@@ -6,6 +6,21 @@ type Source struct {
 	symbols  []Symbol
 }
 
+//BuildSource archive for error reporting
+func BuildSource(fileName string) Source {
+	return Source{fileName: fileName, symbols: []Symbol{}}
+}
+
+//AppendAll symbols to the Source
+func (s *Source) AppendAll(syms []Symbol) {
+	s.symbols = append(s.symbols, syms...)
+}
+
+//Append symbol to the Source
+func (s *Source) Append(sym Symbol) {
+	s.symbols = append(s.symbols, sym)
+}
+
 //SliceLine return the Line sourrounding the symbol
 func (s *Source) SliceLine(sym Symbol) []Symbol {
 	return s.SliceScope(sym, "\n")
