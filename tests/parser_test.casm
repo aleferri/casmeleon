@@ -1,0 +1,219 @@
+
+.set Regs {
+    P;
+    A;
+    X;
+    Y;
+}
+
+.set AluOps {
+    OP_ADD;
+    OP_ICY;
+    OP_SUB;
+    OP_CMP;
+    OP_AND;
+    OP_IOR;
+    OP_EOR;
+    OP_SHR;
+}
+
+.inline ALU_OPCODE_IM
+.with ( r : Regs, op : AluOps ) -> {
+    return ( 0b00 << 6 ) + ( REG << 4 ) + op;
+}
+
+.inline ALU_OPCODE_ZP
+.with ( r : Regs, op : AluOps ) -> {
+    return ( 0b00 << 6 ) + ( REG << 4 ) + ( 0b1 << 3 ) + op;
+}
+
+.opcode LD {{ r, #imm8 }}
+.with ( r : Regs ) -> {
+    if imm8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    
+    if imm8 = 0 {
+        .out [ .expr ALU_OPCODE_IM( r, OP_AND ), imm8 ];
+    } else if imm8 = 255 {
+        .out [ .expr ALU_OPCODE_IM( r, OP_IOR ), imm8 ];
+    } else {
+        .out [ .expr ALU_OPCODE_IM( r, OP_IOR ), imm8, .expr ALU_OPCODE_IM( r, OP_AND ), imm8 ];
+    }
+}
+
+.opcode LD16 {{ r, #imm16 }}
+.with ( r : Regs ) -> {
+    .out [ 0b10000000 + ( r << 4 ), 2, 0b01000100, 2, imm16 >> 8, imm16 & 255 ]
+}
+
+.opcode LD {{ r, zp8 }}
+.with ( r : Regs ) -> {
+    if zp8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ 0b10001000 + ( r << 4 ), zp8 ];
+}
+
+.opcode LD {{ r, ( y, offset ) }}
+.with ( r : Regs, y : Regs ) -> {
+    if offset > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ 0b10000000 + ( r << 4 ) + y, offset ];
+}
+
+.opcode ST {{ r, zp8 }}
+.with ( r : Regs ) -> {
+    if zp8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ 0b11001000 + ( r << 4 ), zp8 ];
+}
+
+.opcode ST {{ r, ( y, offset ) }}
+.with ( r : Regs, y : Regs ) -> {
+    if offset > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ 0b11000000 + ( r << 4 ) + y, offset ];
+}
+
+.opcode BEQ {{ r, addr16 }}
+.with ( r : Regs ) -> {
+    if ( addr16 - .addr ) > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ 0b01000000 + ( r << 4 ), addr16 - .addr ];
+}
+
+.opcode BNE {{ r, addr16 }}
+.with ( r : Regs ) -> {
+    if ( addr16 - .addr ) > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ 0b01000100 + ( r << 4 ), addr16 - .addr ];
+}
+
+.opcode ICY {{ r }}
+.with ( r : Regs ) -> {
+    .out [ .expr ALU_OPCODE_IM( r, OP_ICY ), 0 ];
+}
+
+.opcode SHR {{ r }}
+.with ( r : Regs ) -> {
+    .out [ .expr ALU_OPCODE_IM( r, OP_SHR ), 0 ];
+}
+
+.opcode ADD {{ r, #imm8 }}
+.with ( r : Regs ) -> {
+    if imm8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ .expr ALU_OPCODE_IM( r, OP_ADD ), imm8 ];
+}
+
+.opcode SUB {{ r, #imm8 }}
+.with ( r : Regs ) -> {
+    if imm8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ .expr ALU_OPCODE_IM( r, OP_SUB ), imm8 ];
+}
+
+.opcode CMP {{ r, #imm8 }}
+.with ( r : Regs ) -> {
+    if imm8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ .expr ALU_OPCODE_IM( r, OP_CMP ), imm8 ];
+}
+
+.opcode AND {{ r, #imm8 }}
+.with ( r : Regs ) -> {
+    if imm8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ .expr ALU_OPCODE_IM( r, OP_AND ), imm8 ];
+}
+
+.opcode OR {{ r, #imm8 }}
+.with ( r : Regs ) -> {
+    if imm8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ .expr ALU_OPCODE_IM( r, OP_IOR ), imm8 ];
+}
+
+.opcode EOR {{ r, #imm8 }}
+.with ( r : Regs ) -> {
+    if imm8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ .expr ALU_OPCODE_IM( r, OP_EOR ), imm8 ];
+}
+
+.opcode ADD {{ r, zp8 }}
+.with ( r : Regs ) -> {
+    if zp8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ .expr ALU_OPCODE_ZP( r, OP_ADD ), zp8 ];
+}
+
+.opcode SUB {{ r, zp8 }}
+.with ( r : Regs ) -> {
+    if zp8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ .expr ALU_OPCODE_ZP( r, OP_SUB ), zp8 ];
+}
+
+.opcode CMP {{ r, zp8 }}
+.with ( r : Regs ) -> {
+    if zp8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ .expr ALU_OPCODE_ZP( r, OP_CMP ), zp8 ];
+}
+
+.opcode AND {{ r, zp8 }}
+.with ( r : Regs ) -> {
+    if zp8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ .expr ALU_OPCODE_ZP( r, OP_AND ), zp8 ];
+}
+
+.opcode OR {{ r, zp8 }}
+.with ( r : Regs ) -> {
+    if zp8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ .expr ALU_OPCODE_ZP( r, OP_IOR ), zp8 ];
+}
+
+.opcode EOR {{ r, zp8 }}
+.with ( r : Regs ) -> {
+    if zp8 > 255 {
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    }
+    .out [ .expr ALU_OPCODE_ZP( r, OP_EOR ), zp8 ];
+}
+
+.opcode CALL {{ addr16 }}
+.with () -> {
+    // 16° word is the "Link" register, so:
+    // ST P, 16
+    // LD P, (P, 1)
+    // .WORD ADDR16
+    .out [ 0b11001000, 16, 0b10000000, 1, addr16 >> 8, addr16 & 255 ];
+}
+
+.opcode RET {{ }}
+.with () -> {
+    // 16° word is the "Link" register, so:
+    // LD Y, 16
+    // BNE P, ( Y + 1 )
+    .out [ 0b10001010, 16, 0b01000110, 1 ];
+}
