@@ -82,7 +82,7 @@ func TestLexer(t *testing.T) {
 }
 
 func TestLexerSource(t *testing.T) {
-	fileName := "../../tests/lexer_dump.txt"
+	fileName := "../../tests/lexer_test.txt"
 	var file, fileErr = os.Open(fileName)
 	if fileErr != nil {
 		wnd, _ := os.Getwd()
@@ -120,7 +120,7 @@ func TestLexerSource(t *testing.T) {
 }
 
 func BenchmarkLexerSource(b *testing.B) {
-	fileName := "../../tests/lexer_dump.txt"
+	fileName := "../../tests/lexer_test.txt"
 	var file, fileErr = os.Open(fileName)
 	if fileErr != nil {
 		wnd, _ := os.Getwd()

@@ -1,8 +1,6 @@
 package lexer
 
-import (
-	"github.com/aleferri/casmeleon/pkg/text"
-)
+import "github.com/aleferri/casmeleon/pkg/text"
 
 //Lexer structure
 type Lexer struct {
@@ -38,10 +36,6 @@ func (lexer *Lexer) Scan(fileOffset uint32, symOffset uint32, buffer []rune, sto
 		}
 
 		endOffset := len(buffer) - len(left)
-
-		if endOffset == 0 && stop {
-			panic("Program Looped")
-		}
 
 		sym := text.SymbolOf(fileOffset, symOffset, string(buffer[0:endOffset]), id)
 		symOffset++
