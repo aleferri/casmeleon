@@ -13,7 +13,7 @@ type Symbol struct {
 //SymID is the identifier for the symbol type
 type SymID = uint32
 
-//END_OF_THE_LINE is default SymID for line endings
+//Reserved SymID
 const (
 	NONE = 0 + iota
 	END_OF_THE_LINE
@@ -33,6 +33,7 @@ const (
 	NUMBER
 	IDENTIFIER
 	QUOTED_STRING
+	LAST_RESERVED_TOKEN = QUOTED_STRING
 )
 
 //SymbolOf create a Symbol from the provided parameters

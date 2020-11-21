@@ -2,8 +2,9 @@ package text
 
 //Source represents a Source File that contains a list of symbols
 type Source struct {
-	fileName string
-	symbols  []Symbol
+	fileName  string
+	fileIndex uint32
+	symbols   []Symbol
 }
 
 //BuildSource archive for error reporting
@@ -11,9 +12,26 @@ func BuildSource(fileName string) Source {
 	return Source{fileName: fileName, symbols: []Symbol{}}
 }
 
+//Count the available symbols
+func (s *Source) Count() uint32 {
+	return uint32(len(s.symbols))
+}
+
+//FileIndex of the Source
+func (s *Source) FileIndex() uint32 {
+	return s.fileIndex
+}
+
 //AppendAll symbols to the Source
-func (s *Source) AppendAll(syms []Symbol) {
+func (s *Source) AppendAll(syms []Symbol) []Symbol {
 	s.symbols = append(s.symbols, syms...)
+	notEmpty := []Symbol{}
+	for _, sym := range syms {
+		if sym.symID != WHITESPACE {
+			notEmpty = append(notEmpty, sym)
+		}
+	}
+	return notEmpty
 }
 
 //Append symbol to the Source
