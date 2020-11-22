@@ -135,8 +135,8 @@ func updateQuote(quote string, elem *list.Element, inQuote int, l *list.List) (s
 	return quote, inQuote
 }
 
-//JoinQuote join quote char and form a quoted string
-func JoinQuote(l *list.List) *list.List {
+//JoinQuotes join quote char and form a quoted string
+func JoinQuotes(l *list.List) *list.List {
 	var quote string
 	var inQuote = -1
 	var listLen = l.Len()

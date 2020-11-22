@@ -1,9 +1,10 @@
 package lexing
 
 import (
-	"github.com/aleferri/casmeleon/internal/text"
 	"strings"
 	"testing"
+
+	"github.com/aleferri/casmeleon/internal/text"
 )
 
 func ExpectedTokenType(tType text.TokenType, expected string, t *testing.T) {
@@ -25,7 +26,7 @@ func TestFindTokenType(t *testing.T) {
 func TestTokenMatchingOptions_LineToTokens(t *testing.T) {
 	var test = "add + 8, 5\t;0xFF,'@$'\n"
 	var source = NewSourceReader(strings.NewReader(test), "+;,'@\t ", "Test.string")
-	var ls = RegroupSymbols(JoinQuote(source.NextLine()), "")
+	var ls = RegroupSymbols(JoinQuotes(source.NextLine()), "")
 	var line = text.NewSourceLine(ls, source.LineNumber(), source.sourceName)
 	var opt = NewMatchingOptions("+@", ";,", "$", ";")
 	var slice = opt.LineToTokens(line, 1, "Test.string")
@@ -50,7 +51,7 @@ func TestTokenMatchingOptions_LineToTokens(t *testing.T) {
 func TestTokenMatchingOptions_LineToTokens2(t *testing.T) {
 	var test = "//All this line is a comment"
 	var source = NewSourceReader(strings.NewReader(test), "//\t ", "Test.string")
-	var ls = RegroupSymbols(JoinQuote(source.NextLine()), "//")
+	var ls = RegroupSymbols(JoinQuotes(source.NextLine()), "//")
 	var line = text.NewSourceLine(ls, source.LineNumber(), source.sourceName)
 	var opt = NewMatchingOptions("//", "", "", "//")
 	var slice = opt.LineToTokens(line, 1, "Test.string")

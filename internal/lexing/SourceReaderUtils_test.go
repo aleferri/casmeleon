@@ -16,7 +16,7 @@ func TestSplitKeepSeparators(t *testing.T) {
 func TestJoinQuote(t *testing.T) {
 	var test = "a 'bnf ' + \"&'\""
 	var source = NewSourceReader(strings.NewReader(test), "'\"+& ", "Test.string")
-	var l = JoinQuote(source.NextLine())
+	var l = JoinQuotes(source.NextLine())
 	var expected = []string{"a", " ", "'bnf '", " ", "+", " ", "\"&'\""}
 	if !CheckEquals(l, expected, t) {
 		t.Fail()
@@ -26,7 +26,7 @@ func TestJoinQuote(t *testing.T) {
 func TestJoinQuote2(t *testing.T) {
 	var test = ".number .hex prefix '$'\n"
 	var source = NewSourceReader(strings.NewReader(test), "'\"+& ", "Test.string")
-	var l = JoinQuote(source.NextLine())
+	var l = JoinQuotes(source.NextLine())
 	var expected = []string{".number", " ", ".hex", " ", "prefix", " ", "'$'"}
 	if !CheckEquals(l, expected, t) {
 		t.Fail()
@@ -57,7 +57,7 @@ func TestRegroupSymbols(t *testing.T) {
 func TestRegroupSymbols2(t *testing.T) {
 	var test = ".number .hex prefix '$'\n"
 	var source = NewSourceReader(strings.NewReader(test), "'\"+& ", "Test.string")
-	var slice = RegroupSymbols(JoinQuote(source.NextLine()), "|| && >= <= == !=")
+	var slice = RegroupSymbols(JoinQuotes(source.NextLine()), "|| && >= <= == !=")
 	var expected = []string{".number", " ", ".hex", " ", "prefix", " ", "'$'"}
 	if !CheckEqualsSlice(slice, expected, t) {
 		t.Fail()
@@ -67,8 +67,8 @@ func TestRegroupSymbols2(t *testing.T) {
 func TestRegroupSymbols3(t *testing.T) {
 	var test = "+ \nb"
 	var source = NewSourceReader(strings.NewReader(test), "+ ", "Test.string")
-	var slice = RegroupSymbols(JoinQuote(source.NextLine()), "+ ")
-	slice = append(slice, RegroupSymbols(JoinQuote(source.NextLine()), "+ ")...)
+	var slice = RegroupSymbols(JoinQuotes(source.NextLine()), "+ ")
+	slice = append(slice, RegroupSymbols(JoinQuotes(source.NextLine()), "+ ")...)
 	var expected = []string{"+", " ", "b"}
 	if !CheckEqualsSlice(slice, expected, t) {
 		t.Fail()

@@ -1,13 +1,14 @@
 package lexing
 
 import (
-	"github.com/aleferri/casmeleon/internal/text"
 	"bufio"
 	"container/list"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/aleferri/casmeleon/internal/text"
 )
 
 //SourceReader read the source file/string and split line into tokens (raw)
@@ -54,7 +55,7 @@ func (source *SourceReader) LineNumber() uint {
 
 //NormalizeLine process the raw tokens in line regrouping quoted strings and multi-char operators
 func (source *SourceReader) NormalizeLine(line *list.List, lineNumber uint, symbols string) *text.SourceLine {
-	return text.NewSourceLine(RegroupSymbols(JoinQuote(line), symbols), lineNumber, source.sourceName)
+	return text.NewSourceLine(RegroupSymbols(JoinQuotes(line), symbols), lineNumber, source.sourceName)
 }
 
 //FilterLine remove single line comments and filter whitespace, return a slice of tokens
