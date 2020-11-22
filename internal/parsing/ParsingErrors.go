@@ -72,7 +72,7 @@ func (err ParsingError) Error() string {
 }
 
 //Report the error
-func (err ParsingError) Report(ui ui.UI, line ui.UIPrintable) {
+func (err ParsingError) Report(ui ui.UI, line ui.Printable) {
 	ui.ReportSourceError(err.errorType.String()+" '"+err.arg+"' "+err.msg+" in file "+err.fileName, err.position, line)
 }
 

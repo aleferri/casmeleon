@@ -1,10 +1,11 @@
 package parsing
 
 import (
-	"github.com/aleferri/casmeleon/internal/text"
-	"github.com/aleferri/casmeleon/internal/ui"
 	"strings"
 	"testing"
+
+	"github.com/aleferri/casmeleon/internal/text"
+	"github.com/aleferri/casmeleon/internal/ui"
 )
 
 //TestingState is a simplified ParserState used to test parser combinators
@@ -16,7 +17,7 @@ type TestingState struct {
 }
 
 func NewTestingState(s string) *TestingState {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	buffer := NewTokenBuffer("test", strings.NewReader(s), DefaultTestOptions())
 	return &TestingState{0, nil, buffer, textUI}
 }

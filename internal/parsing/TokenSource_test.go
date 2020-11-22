@@ -1,11 +1,12 @@
 package parsing
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/aleferri/casmeleon/internal/lexing"
 	"github.com/aleferri/casmeleon/internal/text"
 	"github.com/aleferri/casmeleon/internal/ui"
-	"strings"
-	"testing"
 )
 
 func DefaultTestOptions() lexing.TokenMatchingOptions {
@@ -16,7 +17,7 @@ func DefaultTestOptions() lexing.TokenMatchingOptions {
 }
 
 func TestNewTokenBuffer(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	buffer := NewTokenBuffer("test", strings.NewReader(".number .hex prefix '$'\n"), DefaultTestOptions())
 	number := buffer.NextToken(textUI)
 	if number.EnumType() != text.Identifier {
@@ -41,7 +42,7 @@ func TestNewTokenBuffer(t *testing.T) {
 
 func TestTokenBuffer_NextToken(t *testing.T) {
 	test := "+ \nb - a*4"
-	userInterface := ui.NewConsoleUI(false, false)
+	userInterface := ui.NewConsole(false, false)
 	buffer := NewTokenBuffer("test_expression", strings.NewReader(test), DefaultTestOptions())
 	expected := []string{"+", "EOL", "b", "-", "a", "*", "4"}
 	for i, s := range expected {
