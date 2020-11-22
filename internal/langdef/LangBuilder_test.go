@@ -1,15 +1,16 @@
 package langdef
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/aleferri/casmeleon/internal/parsing"
 	"github.com/aleferri/casmeleon/internal/text"
 	"github.com/aleferri/casmeleon/internal/ui"
-	"strings"
-	"testing"
 )
 
 func configureBuilder(buffer *parsing.TokenBuffer) (*LangBuilder, *LangParserState) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	builder := NewLangBuilder()
 	report := func(err *parsing.ParsingError) {
 		textUI.ReportError(err.Error(), true)

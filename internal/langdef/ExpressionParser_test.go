@@ -1,11 +1,12 @@
 package langdef
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/aleferri/casmeleon/internal/parsing"
 	"github.com/aleferri/casmeleon/internal/text"
 	"github.com/aleferri/casmeleon/internal/ui"
-	"strings"
-	"testing"
 )
 
 func testPush(t text.Token) {
@@ -13,7 +14,7 @@ func testPush(t text.Token) {
 }
 
 func TestLangBuilder_ParseExpressionOperand(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	buffer := parsing.NewTokenBuffer("test_expression", strings.NewReader("b"), LangParsingDefaultOptions())
 	pState := NewParserState(textUI, buffer, true, nil)
 	_, r := matchOperand([]text.Token{}, pState)
@@ -29,7 +30,7 @@ func TestLangBuilder_ParseExpressionOperand(t *testing.T) {
 }
 
 func TestLangBuilder_ParseExpressionUnary(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	buffer := parsing.NewTokenBuffer("test_expression", strings.NewReader("+ \nb"), LangParsingDefaultOptions())
 	pState := NewParserState(textUI, buffer, true, nil)
 	_, r := matchUnaryOperation([]text.Token{}, pState)
@@ -45,7 +46,7 @@ func TestLangBuilder_ParseExpressionUnary(t *testing.T) {
 }
 
 func TestLangBuilder_ParseExpressionBinary(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	buffer := parsing.NewTokenBuffer("test_expression", strings.NewReader("+ \nb - a*4"), LangParsingDefaultOptions())
 	pState := NewParserState(textUI, buffer, true, nil)
 	_, r := matchUnaryOperation([]text.Token{}, pState)
@@ -63,7 +64,7 @@ func TestLangBuilder_ParseExpressionBinary(t *testing.T) {
 }
 
 func TestLangBuilder_ParseExpression2(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	buffer := parsing.NewTokenBuffer("test_expression", strings.NewReader("adr < 0 || (adr > 0)"), LangParsingDefaultOptions())
 	pState := NewParserState(textUI, buffer, true, nil)
 	_, r := MatchExpression([]text.Token{}, pState)

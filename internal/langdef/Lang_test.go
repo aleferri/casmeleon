@@ -1,14 +1,15 @@
 package langdef
 
 import (
-	"github.com/aleferri/casmeleon/internal/text"
-	"github.com/aleferri/casmeleon/internal/ui"
 	"strings"
 	"testing"
+
+	"github.com/aleferri/casmeleon/internal/text"
+	"github.com/aleferri/casmeleon/internal/ui"
 )
 
 func TestLangDef_AssembleOpcode(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	lang := NewLangDef("test_assemble", strings.NewReader(".opcode inx -> { if this_address > 4096 { .error this_address \"too long\"; } else { .db 0xFF; } }"), textUI)
 	output, err := lang.AssembleOpcode(0, []text.Token{text.NewInternalToken("this_address")}, []int{0}, 0)
 	if err != nil {
@@ -47,7 +48,7 @@ const vsCPULangDef = ".enum regs\n{\nA\n}\n.enum ports\n{\nport_0,port_1}" +
 const vsCPUOpcodeNumber = 5
 
 func TestLangDef_GetEnumValue(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	lang := NewLangDef("test_enum_value", strings.NewReader(vsCPULangDef), textUI)
 	if lang.GetEnumValue("port_1") != 1 {
 		t.Errorf("Cannot find value port_1 %d\n", lang.GetEnumValue("port_1"))
@@ -60,7 +61,7 @@ func TestLangDef_GetEnumValue(t *testing.T) {
 }
 
 func TestLangDef_GetEnumValueFail(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	lang := NewLangDef("test_enum_value", strings.NewReader(vsCPULangDef), textUI)
 	if lang.GetEnumValue("GHT") != -1 {
 		t.Errorf("GHT does not exist, should be -1, %d\n", lang.GetEnumValue("GHT"))
@@ -73,7 +74,7 @@ func TestLangDef_GetEnumValueFail(t *testing.T) {
 }
 
 func TestLangDef_SortOpcodes(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	lang := NewLangDef("test_sort_opcode", strings.NewReader(vsCPULangDef), textUI)
 	if vsCPUOpcodeNumber != lang.GetOpcodeNumber() {
 		t.Errorf("Different in length: found %d, expected 2\n", lang.GetOpcodeNumber())
@@ -89,7 +90,7 @@ func TestLangDef_SortOpcodes(t *testing.T) {
 }
 
 func TestFilterWindow_FilterByName(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	lang := NewLangDef("test_filter", strings.NewReader(vsCPULangDef), textUI)
 	if vsCPUOpcodeNumber != lang.GetOpcodeNumber() {
 		t.Errorf("Different in length: found %d, expected 2\n", lang.GetOpcodeNumber())
@@ -107,7 +108,7 @@ func TestFilterWindow_FilterByName(t *testing.T) {
 }
 
 func TestFilterWindow_FilterByToken(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	lang := NewLangDef("test_filter", strings.NewReader(vsCPULangDef), textUI)
 	if vsCPUOpcodeNumber != lang.GetOpcodeNumber() {
 		t.Errorf("Different in length: found %d, expected 2\n", lang.GetOpcodeNumber())
@@ -135,7 +136,7 @@ func TestFilterWindow_FilterByToken(t *testing.T) {
 }
 
 func TestFilterWindow_Harvest(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	lang := NewLangDef("test_filter", strings.NewReader(vsCPULangDef), textUI)
 	if vsCPUOpcodeNumber != lang.GetOpcodeNumber() {
 		t.Errorf("Different in length: found %d, expected 2\n", lang.GetOpcodeNumber())

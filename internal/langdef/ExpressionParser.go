@@ -28,7 +28,9 @@ func matchOperand(tokens []text.Token, pState parsing.ParserState) ([]text.Token
 	return tokens, false
 }
 
-var testBinaryOperator = parsing.TryMatchAnyString("+", "-", "*", "/", "%", "<<", ">>", "^", "&", "|", "&&", "||", "==", "!=", ">", "<", ">=", "<=", ".in", ".get")
+var testBinaryOperator = parsing.TryMatchAnyString(
+	"+", "-", "*", "/", "%", "<<", ">>", "^", "&", "|", "&&", "||", "==", "!=", ">", "<", ">=", "<=", ".in", ".get",
+)
 
 func matchBinaryOperation(tokens []text.Token, pState parsing.ParserState, oldPrecedence int) ([]text.Token, bool) {
 	tokens, exist := testBinaryOperator(tokens, pState)
