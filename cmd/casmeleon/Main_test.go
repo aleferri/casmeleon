@@ -1,16 +1,17 @@
 package main
 
 import (
-	"github.com/aleferri/casmeleon/internal/langdef"
-	"github.com/aleferri/casmeleon/internal/ui"
 	"bufio"
 	"fmt"
 	"os"
 	"testing"
+
+	"github.com/aleferri/casmeleon/internal/langdef"
+	"github.com/aleferri/casmeleon/internal/ui"
 )
 
 func TestParseASM(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	langFileName := "../testing/vs_cpu.casm"
 	langFile, err := os.Open(langFileName)
 	if err != nil {
@@ -31,7 +32,7 @@ func TestParseASM(t *testing.T) {
 }
 
 func TestParseASMFail(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	langFileName := "../testing/microcode.casm"
 	langFile, err := os.Open(langFileName)
 	if err != nil {
@@ -46,7 +47,7 @@ func TestParseASMFail(t *testing.T) {
 }
 
 func TestInclude(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	langFileName := "../testing/vs_cpu.casm"
 	langFile, err := os.Open(langFileName)
 	if err != nil {
@@ -66,7 +67,7 @@ func TestInclude(t *testing.T) {
 }
 
 func TestIncludeFail(t *testing.T) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	langFileName := "../testing/vs_cpu.casm"
 	langFile, err := os.Open(langFileName)
 	if err != nil {
@@ -87,7 +88,7 @@ func TestIncludeFail(t *testing.T) {
 }
 
 func BenchmarkParseASM(b *testing.B) {
-	textUI := ui.NewConsoleUI(false, false)
+	textUI := ui.NewConsole(false, false)
 	langFileName := "../testing/vs_cpu.casm"
 	langFile, err := os.Open(langFileName)
 	if err != nil {

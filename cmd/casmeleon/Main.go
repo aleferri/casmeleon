@@ -1,16 +1,17 @@
 package main
 
 import (
-	"github.com/aleferri/casmeleon/internal/langdef"
-	"github.com/aleferri/casmeleon/internal/lexing"
-	"github.com/aleferri/casmeleon/internal/parsing"
-	"github.com/aleferri/casmeleon/internal/text"
-	"github.com/aleferri/casmeleon/internal/ui"
 	"bufio"
 	"flag"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/aleferri/casmeleon/internal/langdef"
+	"github.com/aleferri/casmeleon/internal/lexing"
+	"github.com/aleferri/casmeleon/internal/parsing"
+	"github.com/aleferri/casmeleon/internal/text"
+	"github.com/aleferri/casmeleon/internal/ui"
 )
 
 //ASMDefaultOptions return the default options for assembly files
@@ -131,7 +132,7 @@ func main() {
 	var userPass int
 	flag.IntVar(&userPass, "pass", 3, "-pass=x")
 	flag.Parse()
-	tUI := ui.NewConsoleUI(false, false)
+	tUI := ui.NewConsole(false, false)
 	if strings.EqualFold(langFileName, ".") {
 		tUI.ReportError("missing -lang=langfile", true)
 		return
