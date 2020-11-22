@@ -6,6 +6,9 @@ import (
 	"github.com/aleferri/casmeleon/pkg/text"
 )
 
+//Match a generic rule in the provided stream
+type Match func(stream Stream) (CSTNode, error)
+
 //Accept symbol of type sym
 func Accept(stream Stream, sym text.SymID) (text.Symbol, bool) {
 	v := stream.Peek()
@@ -67,4 +70,57 @@ func RequireAny(stream Stream, syms ...text.SymID) (text.Symbol, error) {
 func ExpectAny(stream Stream, syms ...text.SymID) error {
 	_, err := RequireAny(stream, syms...)
 	return err
+}
+
+//RequireSequence specified by caller
+func RequireSequence(stream Stream, seq ...text.SymID) ([]text.Symbol, error) {
+	acc := []text.Symbol{}
+	for _, m := range seq {
+		item, err := Require(stream, m)
+		if err != nil {
+			return acc, err
+		}
+		acc = append(acc, item)
+	}
+	return acc, nil
+}
+
+//AcceptInsetPattern in a stream
+func AcceptInsetPattern(stream Stream, left text.SymID, right text.SymID, seq ...text.SymID) ([]text.Symbol, error) {
+	acc := []text.Symbol{}
+	matchLeft := Expect(stream, left)
+	if matchLeft != nil {
+		return acc, matchLeft
+	}
+	for stream.Peek().ID() != right {
+		for _, m := range seq {
+			item, err := Require(stream, m)
+			if err != nil {
+				return acc, err
+			}
+			acc = append(acc, item)
+		}
+	}
+	matchRight := Expect(stream, right)
+	return acc, matchRight
+}
+
+//AcceptInsetDelegate read left expected symbol, then test for the right expected symbol.
+//If symbol is not the specified symbol this function will delegate the inset matching on the provided function
+//In the end the right symbol is read
+func AcceptInsetDelegate(stream Stream, left text.SymID, right text.SymID, dg Match) ([]CSTNode, error) {
+	leafs := []CSTNode{}
+	matchLeft := Expect(stream, left)
+	if matchLeft != nil {
+		return leafs, matchLeft
+	}
+	for stream.Peek().ID() != right {
+		part, err := dg(stream)
+		if err != nil {
+			return leafs, err
+		}
+		leafs = append(leafs, part)
+	}
+	matchRight := Expect(stream, right)
+	return leafs, matchRight
 }
