@@ -6,59 +6,65 @@
     Y;
 }
 
-.set AluOps {
+.set BinaryOps {
     OP_ADD;
-    OP_ICY;
+    OP_TAD;
     OP_SUB;
     OP_CMP;
     OP_AND;
     OP_IOR;
     OP_EOR;
-    OP_SHR;
+    OP_MOV;
+}
+
+.set UnaryOps {
+    OP_ICY;
+    OP_IDT;
+    OP_ASL;
+    OP_LSL;
 }
 
 .inline ALU_OPCODE_IM
-.with ( r : Regs, op : AluOps ) -> {
+.with ( r : Regs, op : BinaryOps ) -> {
     return ( 0b00 << 6 ) + ( REG << 4 ) + op;
 }
 
 .inline ALU_OPCODE_ZP
-.with ( r : Regs, op : AluOps ) -> {
+.with ( r : Regs, op : BinaryOps ) -> {
     return ( 0b00 << 6 ) + ( REG << 4 ) + ( 0b1 << 3 ) + op;
+}
+
+.inline ALU_OPCODE_RU
+.with ( r : Regs, op : UnaryOps ) -> {
+    return ( 0b10 << 6 ) + ( REG << 4 ) + ( ob1 << 3 ) + op;
 }
 
 .opcode LD {{ r, #imm8 }}
 .with ( r : Regs ) -> {
     if imm8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction, use LD16 instead";
     }
-    
-    if imm8 = 0 {
-        .out [ .expr ALU_OPCODE_IM( r, OP_AND ), imm8 ];
-    } else if imm8 = 255 {
-        .out [ .expr ALU_OPCODE_IM( r, OP_IOR ), imm8 ];
-    } else {
-        .out [ .expr ALU_OPCODE_IM( r, OP_IOR ), imm8, .expr ALU_OPCODE_IM( r, OP_AND ), imm8 ];
-    }
+
+    .out [ .expr ALU_OPCODE_IM( r, OP_MOV ), imm8 ];
 }
 
 .opcode LD16 {{ r, #imm16 }}
 .with ( r : Regs ) -> {
-    .out [ 0b10000000 + ( r << 4 ), 2, 0b01000100, 2, imm16 >> 8, imm16 & 255 ]
+    .out [ 0b10000000 + ( r << 4 ), 2, 0b01000100, 2, imm16 >> 8, imm16 & 255 ];
 }
 
 .opcode LD {{ r, zp8 }}
 .with ( r : Regs ) -> {
     if zp8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "Zero page is restricted to the first 256 words";
     }
-    .out [ 0b10001000 + ( r << 4 ), zp8 ];
+    .out [ .expr ALU_OPCODE_ZP( r, OP_MOV ), imm8 ];
 }
 
 .opcode LD {{ r, ( y, offset ) }}
 .with ( r : Regs, y : Regs ) -> {
     if offset > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "Offset must be less than 256";
     }
     .out [ 0b10000000 + ( r << 4 ) + y, offset ];
 }
@@ -66,7 +72,7 @@
 .opcode ST {{ r, zp8 }}
 .with ( r : Regs ) -> {
     if zp8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "Zero page is restricted to the first 256 words";
     }
     .out [ 0b11001000 + ( r << 4 ), zp8 ];
 }
@@ -74,15 +80,15 @@
 .opcode ST {{ r, ( y, offset ) }}
 .with ( r : Regs, y : Regs ) -> {
     if offset > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "Zero page is restricted to the first 256 words";
     }
     .out [ 0b11000000 + ( r << 4 ) + y, offset ];
 }
 
 .opcode BEQ {{ r, addr16 }}
 .with ( r : Regs ) -> {
-    if ( addr16 - .addr ) > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+    if ( addr16 - .addr ) > 128 || ( addr16 - .addr ) < -126 {
+        .error addr8 "Cannot branch outside the -126,128 address range";
     }
     .out [ 0b01000000 + ( r << 4 ), addr16 - .addr ];
 }
@@ -90,25 +96,40 @@
 .opcode BNE {{ r, addr16 }}
 .with ( r : Regs ) -> {
     if ( addr16 - .addr ) > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "Cannot branch outside the -126,128 address range";
     }
     .out [ 0b01000100 + ( r << 4 ), addr16 - .addr ];
 }
 
+.opcode JMP {{ addr16 }}
+.with ( ) -> {
+    if ( addr16 - .addr ) > 255 {
+        .error addr8 "Cannot branch outside the -126,128 address range";
+    }
+    .out [ 0b01001000, addr16 - .addr ];
+}
+
+// Unary ALU
 .opcode ICY {{ r }}
 .with ( r : Regs ) -> {
-    .out [ .expr ALU_OPCODE_IM( r, OP_ICY ), 0 ];
+    .out [ .expr ALU_OPCODE_RU( r, OP_ICY ), 0 ];
 }
 
-.opcode SHR {{ r }}
+.opcode ASL {{ r }}
 .with ( r : Regs ) -> {
-    .out [ .expr ALU_OPCODE_IM( r, OP_SHR ), 0 ];
+    .out [ .expr ALU_OPCODE_RU( r, OP_ASL ), 0 ];
 }
 
+.opcode LSR {{ r }}
+.with ( r : Regs ) -> {
+    .out [ .expr ALU_OPCODE_RU( r, OP_LSR ), 0 ];
+}
+
+// Binary ALU IMM
 .opcode ADD {{ r, #imm8 }}
 .with ( r : Regs ) -> {
     if imm8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction";
     }
     .out [ .expr ALU_OPCODE_IM( r, OP_ADD ), imm8 ];
 }
@@ -116,7 +137,7 @@
 .opcode SUB {{ r, #imm8 }}
 .with ( r : Regs ) -> {
     if imm8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction";
     }
     .out [ .expr ALU_OPCODE_IM( r, OP_SUB ), imm8 ];
 }
@@ -124,7 +145,7 @@
 .opcode CMP {{ r, #imm8 }}
 .with ( r : Regs ) -> {
     if imm8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction";
     }
     .out [ .expr ALU_OPCODE_IM( r, OP_CMP ), imm8 ];
 }
@@ -132,15 +153,15 @@
 .opcode AND {{ r, #imm8 }}
 .with ( r : Regs ) -> {
     if imm8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction";
     }
     .out [ .expr ALU_OPCODE_IM( r, OP_AND ), imm8 ];
 }
 
-.opcode OR {{ r, #imm8 }}
+.opcode ORA {{ r, #imm8 }}
 .with ( r : Regs ) -> {
     if imm8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction";
     }
     .out [ .expr ALU_OPCODE_IM( r, OP_IOR ), imm8 ];
 }
@@ -148,15 +169,16 @@
 .opcode EOR {{ r, #imm8 }}
 .with ( r : Regs ) -> {
     if imm8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "Cannot embed 8+ bits of address inside the instruction";
     }
     .out [ .expr ALU_OPCODE_IM( r, OP_EOR ), imm8 ];
 }
 
+// Binary ALU IMM
 .opcode ADD {{ r, zp8 }}
 .with ( r : Regs ) -> {
     if zp8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "ZeroPage is limited to the first 256 locations of memory";
     }
     .out [ .expr ALU_OPCODE_ZP( r, OP_ADD ), zp8 ];
 }
@@ -164,7 +186,7 @@
 .opcode SUB {{ r, zp8 }}
 .with ( r : Regs ) -> {
     if zp8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "ZeroPage is limited to the first 256 locations of memory";
     }
     .out [ .expr ALU_OPCODE_ZP( r, OP_SUB ), zp8 ];
 }
@@ -172,7 +194,7 @@
 .opcode CMP {{ r, zp8 }}
 .with ( r : Regs ) -> {
     if zp8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "ZeroPage is limited to the first 256 locations of memory";
     }
     .out [ .expr ALU_OPCODE_ZP( r, OP_CMP ), zp8 ];
 }
@@ -180,15 +202,15 @@
 .opcode AND {{ r, zp8 }}
 .with ( r : Regs ) -> {
     if zp8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "ZeroPage is limited to the first 256 locations of memory";
     }
     .out [ .expr ALU_OPCODE_ZP( r, OP_AND ), zp8 ];
 }
 
-.opcode OR {{ r, zp8 }}
+.opcode ORA {{ r, zp8 }}
 .with ( r : Regs ) -> {
     if zp8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "ZeroPage is limited to the first 256 locations of memory";
     }
     .out [ .expr ALU_OPCODE_ZP( r, OP_IOR ), zp8 ];
 }
@@ -196,7 +218,7 @@
 .opcode EOR {{ r, zp8 }}
 .with ( r : Regs ) -> {
     if zp8 > 255 {
-        .error addr8 "Cannot embed 8+ bits of address inside the instruction"
+        .error addr8 "ZeroPage is limited to the first 256 locations of memory";
     }
     .out [ .expr ALU_OPCODE_ZP( r, OP_EOR ), zp8 ];
 }
@@ -214,6 +236,6 @@
 .with () -> {
     // 16° word is the "Link" register, so:
     // LD Y, 16
-    // BNE P, ( Y + 1 )
-    .out [ 0b10001010, 16, 0b01000110, 1 ];
+    // JMP P, ( Y + 1 )
+    .out [ 0b10001010, 16, 0b01001010, 1 ];
 }
