@@ -62,6 +62,9 @@ func FollowCommentClose(r rune, state uint32) uint32 {
 
 //FollowNone of the next chars, example: end of the line
 func FollowNone(r rune, state uint32) uint32 {
+	if state == 1 {
+		return 2
+	}
 	return 0
 }
 
@@ -94,9 +97,10 @@ func FollowSame(s rune) Follow {
 
 //FollowSequence of runes
 func FollowSequence(seq ...rune) Follow {
+	size := len(seq)
 	return func(r rune, state uint32) uint32 {
 		i := state - 1
-		if r == seq[i] {
+		if size > int(i) && r == seq[i] {
 			return state + 1
 		}
 		return 0
@@ -109,7 +113,7 @@ func FollowComparison(r rune, state uint32) uint32 {
 	case 1:
 		{
 			if r == '<' {
-				return 3
+				return 2
 			}
 			return 5
 		}

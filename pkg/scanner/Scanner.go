@@ -13,31 +13,29 @@ func FastScan(buffer []rune, stop bool, settings DelimitersMap) (toks []Token, l
 	len := len(buffer)
 	for i, b := range buffer {
 
-		switch state {
-		case ACCUMULATE:
-			{
-				followFunc, ok = settings.delimiters[b]
-				if ok {
-					tokens = append(tokens, Token{buffer[lastDelimiter:i], -1})
-					lastDelimiter = i
-					state = FOLLOW
-				}
-			}
-		case FOLLOW:
-			{
-				followState = followFunc(b, followState)
-				if followState == 0 {
-					tokens = append(tokens, Token{buffer[lastDelimiter:i], -1})
-					lastDelimiter = i
-					state = ACCUMULATE
-					followState = 1
-				}
+		if state == FOLLOW {
+			followState = followFunc(b, followState)
+			if followState == 0 {
+				tokens = append(tokens, Token{buffer[lastDelimiter:i], 0})
+				lastDelimiter = i
+				state = ACCUMULATE
 			}
 		}
+
+		if state == ACCUMULATE {
+			followFunc, ok = settings.delimiters[b]
+			if ok {
+				tokens = append(tokens, Token{buffer[lastDelimiter:i], 0})
+				lastDelimiter = i
+				state = FOLLOW
+				followState = followFunc(b, 1)
+			}
+		}
+
 	}
 
 	if stop && lastDelimiter != len {
-		tokens = append(tokens, Token{buffer[lastDelimiter:], -1})
+		tokens = append(tokens, Token{buffer[lastDelimiter:], 0})
 		return tokens, []rune{}
 	}
 	return tokens, buffer[lastDelimiter:]
@@ -46,22 +44,23 @@ func FastScan(buffer []rune, stop bool, settings DelimitersMap) (toks []Token, l
 //Join matching tokens
 func Join(matching map[int32]int32, tokens []Token, merged *Token, last int32) ([]Token, *Token, int32) {
 	valid := []Token{}
-	for _, t := range tokens {
-		p, ok := matching[t.basicID]
-		if ok {
-			if last == p {
-				merged = merged.Merge(t)
+	for i, t := range tokens {
+		if last != -1 {
+			*merged = merged.Merge(t)
+			if last == t.basicID {
 				valid = append(valid, *merged)
-				merged = nil
 				last = -1
-			} else {
-				merged = &t
+				merged = nil
 			}
 		} else {
-			if last != -1 {
-				merged = merged.Merge(t)
+			p, ok := matching[t.basicID]
+			if ok {
+				merged = &tokens[i]
+				last = p
 			} else {
-				valid = append(valid, t)
+				if len(t.slice) > 0 {
+					valid = append(valid, t)
+				}
 			}
 		}
 	}
@@ -70,7 +69,7 @@ func Join(matching map[int32]int32, tokens []Token, merged *Token, last int32) (
 
 //Classify basic id
 func Classify(tokens []Token, classifier func(t *Token) int32) {
-	for _, t := range tokens {
-		t.basicID = classifier(&t)
+	for i := range tokens {
+		tokens[i].basicID = classifier(&tokens[i])
 	}
 }
