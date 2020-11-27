@@ -10,8 +10,8 @@ func FromMap(delimiters map[rune]Follow) DelimitersMap {
 	return DelimitersMap{delimiters}
 }
 
-//FollowComments delimiters
-func FollowComments(r rune, state uint32) uint32 {
+//FollowCommentOpen delimiter
+func FollowCommentOpen(r rune, state uint32) uint32 {
 	switch state {
 	case 1:
 		{
@@ -20,6 +20,31 @@ func FollowComments(r rune, state uint32) uint32 {
 	case 2:
 		{
 			if r == '*' || r == '/' {
+				return 3
+			}
+			return 0
+		}
+	case 3:
+		{
+			return 0
+		}
+	default:
+		{
+			return 0
+		}
+	}
+}
+
+//FollowCommentClose delimiter
+func FollowCommentClose(r rune, state uint32) uint32 {
+	switch state {
+	case 1:
+		{
+			return 2
+		}
+	case 2:
+		{
+			if r == '/' {
 				return 3
 			}
 			return 0

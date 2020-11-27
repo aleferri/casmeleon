@@ -2,7 +2,8 @@ package scanner
 
 //Token is a range of runes
 type Token struct {
-	slice []rune
+	slice   []rune
+	basicID int32
 }
 
 func (t *Token) String() string {
@@ -11,8 +12,8 @@ func (t *Token) String() string {
 
 //Merge ADJACENTS tokens, mind the capitalized ADJACENTS
 //guaranteed memory corruption error otherwise
-func (t *Token) Merge(rhs *Token) Token {
+func (t Token) Merge(rhs Token) *Token {
 	lLen := len(t.slice)
 	rLen := len(rhs.slice)
-	return Token{t.slice[:lLen+rLen]}
+	return &Token{t.slice[:lLen+rLen], 0}
 }
