@@ -2,6 +2,7 @@ package parser
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/aleferri/casmeleon/pkg/text"
 )
@@ -10,38 +11,37 @@ import (
 type Match func(stream Stream) (CSTNode, error)
 
 //Accept symbol of type sym
-func Accept(stream Stream, sym text.SymID) (text.Symbol, bool) {
+func Accept(stream Stream, sym uint32) (text.Symbol, bool) {
 	v := stream.Peek()
 	if v.ID() == sym {
-		stream.Next()
-		return v, true
+		return stream.Next(), true
 	}
 	return v, false
 }
 
 //Consume symbol of type sym
-func Consume(stream Stream, sym text.SymID) bool {
+func Consume(stream Stream, sym uint32) bool {
 	_, c := Accept(stream, sym)
 	return c
 }
 
 //Require accept a symbol of type sym or return an error if the symbol is not the accepted symbol type
-func Require(stream Stream, sym text.SymID) (text.Symbol, error) {
+func Require(stream Stream, sym uint32) (text.Symbol, error) {
 	v, c := Accept(stream, sym)
 	if c {
 		return v, nil
 	}
-	return v, errors.New("Expected symbol")
+	return v, UnexpectedSymbol(sym, v, "Unexpected Symbol '%s', expected '%s'")
 }
 
 //Expect consume a symbol of type sym or return an error if the symbol is not the accepted symbol type
-func Expect(stream Stream, sym text.SymID) error {
+func Expect(stream Stream, sym uint32) error {
 	_, e := Require(stream, sym)
 	return e
 }
 
 //AcceptAny accept any of the proposed symbols
-func AcceptAny(stream Stream, syms ...text.SymID) (text.Symbol, bool) {
+func AcceptAny(stream Stream, syms ...uint32) (text.Symbol, bool) {
 	peek := stream.Peek()
 	for _, sym := range syms {
 		if sym == peek.ID() {
@@ -52,28 +52,28 @@ func AcceptAny(stream Stream, syms ...text.SymID) (text.Symbol, bool) {
 }
 
 //ConsumeAny symbol of type syms
-func ConsumeAny(stream Stream, syms ...text.SymID) bool {
+func ConsumeAny(stream Stream, syms ...uint32) bool {
 	_, c := AcceptAny(stream, syms...)
 	return c
 }
 
 //RequireAny of the listed symbols
-func RequireAny(stream Stream, syms ...text.SymID) (text.Symbol, error) {
+func RequireAny(stream Stream, syms ...uint32) (text.Symbol, error) {
 	v, c := AcceptAny(stream, syms...)
 	if !c {
-		return v, errors.New("Expected one of symbols")
+		return v, errors.New("Expected one of symbols: " + fmt.Sprintf("%v", syms))
 	}
 	return v, nil
 }
 
 //ExpectAny of the listed symbols
-func ExpectAny(stream Stream, syms ...text.SymID) error {
+func ExpectAny(stream Stream, syms ...uint32) error {
 	_, err := RequireAny(stream, syms...)
 	return err
 }
 
 //RequireSequence specified by caller
-func RequireSequence(stream Stream, seq ...text.SymID) ([]text.Symbol, error) {
+func RequireSequence(stream Stream, seq ...uint32) ([]text.Symbol, error) {
 	acc := []text.Symbol{}
 	for _, m := range seq {
 		item, err := Require(stream, m)
@@ -86,7 +86,7 @@ func RequireSequence(stream Stream, seq ...text.SymID) ([]text.Symbol, error) {
 }
 
 //AcceptInsetPattern in a stream
-func AcceptInsetPattern(stream Stream, left text.SymID, right text.SymID, seq ...text.SymID) ([]text.Symbol, error) {
+func AcceptInsetPattern(stream Stream, left uint32, right uint32, seq ...uint32) ([]text.Symbol, error) {
 	acc := []text.Symbol{}
 	matchLeft := Expect(stream, left)
 	if matchLeft != nil {
@@ -108,7 +108,7 @@ func AcceptInsetPattern(stream Stream, left text.SymID, right text.SymID, seq ..
 //AcceptInsetDelegate read left expected symbol, then test for the right expected symbol.
 //If symbol is not the specified symbol this function will delegate the inset matching on the provided function
 //In the end the right symbol is read
-func AcceptInsetDelegate(stream Stream, left text.SymID, right text.SymID, dg Match) ([]CSTNode, error) {
+func AcceptInsetDelegate(stream Stream, left uint32, right uint32, dg Match) ([]CSTNode, error) {
 	leafs := []CSTNode{}
 	matchLeft := Expect(stream, left)
 	if matchLeft != nil {
@@ -120,6 +120,30 @@ func AcceptInsetDelegate(stream Stream, left text.SymID, right text.SymID, dg Ma
 			return leafs, err
 		}
 		leafs = append(leafs, part)
+	}
+	matchRight := Expect(stream, right)
+	return leafs, matchRight
+}
+
+//AcceptPatternWithTest in the stream source
+func AcceptPatternWithTest(stream Stream, left uint32, right uint32, test uint32, dg Match) ([]CSTNode, error) {
+	leafs := []CSTNode{}
+	matchLeft := Expect(stream, left)
+	if matchLeft != nil {
+		return leafs, matchLeft
+	}
+
+	first := true
+	for peek := stream.Peek().ID(); peek != right && (peek == test || first); peek = stream.Peek().ID() {
+		if !first {
+			stream.Next()
+		}
+		part, err := dg(stream)
+		if err != nil {
+			return leafs, err
+		}
+		leafs = append(leafs, part)
+		first = false
 	}
 	matchRight := Expect(stream, right)
 	return leafs, matchRight

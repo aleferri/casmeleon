@@ -13,14 +13,15 @@ const (
 	RBracket
 	Comma
 	Semicolon
+	Colon
 	SymbolHash
 	SymbolAt
 	SymbolDollar
+	SymbolArrow
 	EOL
 	EOF
 	UnaryOperator
 	BinaryOperator
-	SymbolArrow
 	Identifier
 	Number
 	SingleQuotedString
@@ -29,10 +30,10 @@ const (
 	KeywordELSE
 	KeywordFOR
 	KeywordUNTIL
-	DirDeposit
-	DirNumberFormat
 	KeywordEnum
 	KeywordOpcode
+	DirDeposit
+	DirNumberFormat
 	DirError
 	KeywordInclude
 	GenericSeparator
@@ -107,5 +108,6 @@ var TokenTypeMap = map[string]TokenType{
 	"(": LParen, ")": RParen, "[": LBracket, "]": RBracket, "{": LBrace, "}": RBrace,
 	",": Comma, ";": Semicolon, "if": KeywordIF, "else": KeywordELSE, ".db": DirDeposit, ".dw": DirDeposit,
 	".dd": DirDeposit, ".opcode": KeywordOpcode, ".enum": KeywordEnum, ".number": DirNumberFormat, ".error": DirError,
-	"->": SymbolArrow, "$": SymbolDollar, "#": SymbolHash, "@": SymbolAt, ".include": KeywordInclude, "for": KeywordFOR, "until": KeywordUNTIL,
+	"->": SymbolArrow, "$": SymbolDollar, "#": SymbolHash, "@": SymbolAt, ".include": KeywordInclude, "for": KeywordFOR,
+	"until": KeywordUNTIL,
 }

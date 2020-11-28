@@ -7,37 +7,73 @@ type Symbol struct {
 	fileOffset uint32
 	symOffset  uint32
 	value      string
-	symID      SymID
+	symID      uint32
 }
-
-//SymID is the identifier for the symbol type
-type SymID = uint32
 
 //Reserved SymID
 const (
 	NONE = 0 + iota
-	END_OF_THE_LINE
+	EOL
+	EOF
 	WHITESPACE
-	ROUND_OPEN
-	ROUND_CLOSE
-	SQUARE_OPEN
-	SQUARE_CLOSE
-	CURLY_OPEN
-	CURLY_CLOSE
-	COMMA
-	COLON
-	SEMICOLON
-	AT
-	HASH
-	OPERATOR
-	NUMBER
-	IDENTIFIER
-	QUOTED_STRING
-	LAST_RESERVED_TOKEN = QUOTED_STRING
+	RoundOpen
+	RoundClose
+	SquareOpen
+	SquareClose
+	CurlyOpen
+	CurlyClose
+	DoubleCurlyOpen
+	DoubleCurlyClose
+	Comma
+	Colon
+	Semicolon
+	SymbolAt
+	SymbolHash
+	SymbolArrow
+	CommentStart
+	CommentEnd
+	CommentLine
+	QuotedString
+	QuotedChar
+	OperatorPlus
+	OperatorMinus
+	OperatorMul
+	OperatorDiv
+	OperatorMod
+	OperatorRightShift
+	OperatorLeftShift
+	OperatorAnd
+	OperatorLAnd
+	OperatorOr
+	OperatorLOr
+	OperatorXor
+	OperatorNot
+	OperatorNeg
+	OperatorLess
+	OperatorLessEqual
+	OperatorEqual
+	OperatorGreaterEqual
+	OperatorGreater
+	OperatorNotEqual
+	KeywordIF
+	KeywordELSE
+	KeywordOut
+	KeywordSet
+	KeywordNum
+	KeywordInline
+	KeywordOpcode
+	KeywordWith
+	KeywordExpr
+	KeywordWarning
+	KeywordError
+	KeywordReturn
+	Number
+	Identifier
+	LastReservedToken = Identifier
 )
 
 //SymbolOf create a Symbol from the provided parameters
-func SymbolOf(fileOffset, symOffset uint32, value string, symID SymID) Symbol {
+func SymbolOf(fileOffset, symOffset uint32, value string, symID uint32) Symbol {
 	return Symbol{fileOffset: fileOffset, symOffset: symOffset, value: value, symID: symID}
 }
 
@@ -46,8 +82,14 @@ func SymbolEmpty(fileOffset uint32) Symbol {
 	return Symbol{fileOffset: fileOffset, symOffset: 0, value: "", symID: 0}
 }
 
+//WithID return the same symbol with different ID
+func (s Symbol) WithID(symID uint32) Symbol {
+	s.symID = symID
+	return s
+}
+
 //ID is the identifier of the Symbol
-func (s Symbol) ID() SymID {
+func (s Symbol) ID() uint32 {
 	return s.symID
 }
 

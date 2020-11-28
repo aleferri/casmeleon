@@ -1,10 +1,8 @@
-package language
-
-import "github.com/aleferri/casmeleon/pkg/text"
+package casm
 
 //Opcode declared in the assembly language
 type Opcode struct {
-	name   string       //opcode name
-	format []text.SymID //opcode parameters format
-	params []string     //opcode parameters name
+	name   string   //opcode name
+	format []uint32 //opcode parameters format
+	params []string //opcode parameters name
 }

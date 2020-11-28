@@ -41,8 +41,8 @@ func FastScan(buffer []rune, stop bool, settings DelimitersMap) (toks []Token, l
 	return tokens, buffer[lastDelimiter:]
 }
 
-//Join matching tokens
-func Join(matching map[int32]int32, tokens []Token, merged *Token, last int32) ([]Token, *Token, int32) {
+//Merge matching tokens
+func Merge(matching map[int32]int32, tokens []Token, merged *Token, last int32) ([]Token, *Token, int32) {
 	valid := []Token{}
 	for i, t := range tokens {
 		if last != -1 {
@@ -67,9 +67,28 @@ func Join(matching map[int32]int32, tokens []Token, merged *Token, last int32) (
 	return valid, merged, last
 }
 
-//Classify basic id
-func Classify(tokens []Token, classifier func(t *Token) int32) {
+//ClassifyMergeableTokens for successive Join
+func ClassifyMergeableTokens(tokens []Token) {
 	for i := range tokens {
-		tokens[i].basicID = classifier(&tokens[i])
+		size := len(tokens[i].slice)
+		if size == 2 {
+			a := tokens[i].slice[0]
+			b := tokens[i].slice[1]
+			if a == '/' && b == '*' {
+				tokens[i].basicID = 1
+			}
+			if a == '/' && b == '/' {
+				tokens[i].basicID = 4
+			}
+		} else if size == 1 {
+			a := tokens[i].slice[0]
+			if a == '"' {
+				tokens[i].basicID = 2
+			} else if a == '\'' {
+				tokens[i].basicID = 3
+			} else if a == '\n' {
+				tokens[i].basicID = 5
+			}
+		}
 	}
 }

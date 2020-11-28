@@ -1,90 +1,122 @@
-package language
+package casm
 
 import (
 	"errors"
+	"fmt"
 
-	reserved "github.com/aleferri/casmeleon/internal/text"
 	"github.com/aleferri/casmeleon/pkg/parser"
 	"github.com/aleferri/casmeleon/pkg/text"
 )
 
 //ParseNumberBase parse a number base directive
-func ParseNumberBase(stream parser.Stream, report parser.ErrorOf) (parser.CSTNode, bool) {
-	seq, err := parser.RequireSequence(stream, reserved.KEYWORD_NUM, text.NUMBER, text.QUOTED_STRING, text.QUOTED_STRING)
+func ParseNumberBase(stream parser.Stream) (parser.CSTNode, error) {
+	seq, err := parser.RequireSequence(stream, text.KeywordNum, text.Number, text.QuotedString, text.QuotedString)
 	if err != nil {
-		report(stream.Peek(), stream.Source(), err.Error())
-		return nil, false
+		return nil, err
 	}
-	return parser.BuildLeaf(seq, NUMBER_BASE), true
+	return parser.BuildLeaf(seq, NUMBER_BASE), nil
 }
 
 //ParseSet parse a set of symbols
-func ParseSet(stream parser.Stream, report parser.ErrorOf) (parser.CSTNode, bool) {
-	seq, err := parser.RequireSequence(stream, reserved.KEYWORD_SET, text.IDENTIFIER)
+func ParseSet(stream parser.Stream) (parser.CSTNode, error) {
+	seq, err := parser.RequireSequence(stream, text.KeywordSet, text.Identifier)
 	if err != nil {
-		report(stream.Peek(), stream.Source(), err.Error())
-		return nil, false
+		return nil, err
 	}
-	after, noInset := parser.AcceptInsetPattern(stream, text.CURLY_OPEN, text.CURLY_CLOSE, text.IDENTIFIER, text.SEMICOLON)
+	after, noInset := parser.AcceptInsetPattern(stream, text.CurlyOpen, text.CurlyClose, text.Identifier, text.Semicolon)
 	if noInset != nil {
-		report(stream.Peek(), stream.Source(), noInset.Error())
-		return nil, false
+		return nil, noInset
 	}
 	list := parser.BuildLeaf(after, SYMBOL_SET)
 	set := parser.BuildBranch(seq, SET_NODE)
 	set.InsertChild(list, true)
-	return set, true
+	return set, nil
 }
 
 //ParseOpcode from the source stream
-func ParseOpcode(stream parser.Stream, report parser.ErrorOf) (parser.CSTNode, bool) {
-	seq, err := parser.RequireSequence(stream, reserved.KEYWORD_OPCODE, text.IDENTIFIER)
+func ParseOpcode(stream parser.Stream) (parser.CSTNode, error) {
+	seq, err := parser.RequireSequence(stream, text.KeywordOpcode, text.Identifier)
 	if err != nil {
-		report(stream.Peek(), stream.Source(), err.Error())
-		return nil, false
+		return nil, err
 	}
-	args, noArgs := parser.AcceptInsetDelegate(stream, reserved.DOUBLE_CURLY_OPEN, reserved.DOUBLE_CURLY_CLOSE, ParseArgs)
+	args, noArgs := parser.AcceptInsetDelegate(stream, text.DoubleCurlyOpen, text.DoubleCurlyClose, ParseArgs)
 	if noArgs != nil {
-		report(stream.Peek(), stream.Source(), noArgs.Error())
-		return nil, false
+		return nil, noArgs
 	}
-	noWith := parser.Expect(stream, reserved.KEYWORD_WITH)
+	noWith := parser.Expect(stream, text.KeywordWith)
 	if noWith != nil {
-		report(stream.Peek(), stream.Source(), noWith.Error())
-		return nil, false
+		return nil, noWith
 	}
-	withContent, noParens := parser.AcceptInsetPattern(stream, text.ROUND_OPEN, text.ROUND_CLOSE, text.IDENTIFIER, text.COLON, text.IDENTIFIER)
-	if noParens != nil {
-		report(stream.Peek(), stream.Source(), noParens.Error())
-		return nil, false
+	withContent, invalidWith := parser.AcceptPatternWithTest(stream, text.RoundOpen, text.RoundClose, text.Comma, ParseWithArgs)
+	if invalidWith != nil {
+		return nil, invalidWith
 	}
-	noArrow := parser.Expect(stream, reserved.ARROW)
+	noArrow := parser.Expect(stream, text.SymbolArrow)
 	if noArrow != nil {
-		report(stream.Peek(), stream.Source(), noArrow.Error())
-		return nil, false
+		return nil, noArrow
 	}
 
 	body, bodyErr := ParseBlock(stream)
 	if bodyErr != nil {
-		report(stream.Peek(), stream.Source(), bodyErr.Error())
-		return nil, false
+		return nil, bodyErr
 	}
 
 	opcodeNode := parser.BuildBranch(seq, OPCODE_NODE)
 	for _, arg := range args {
 		opcodeNode.InsertChild(arg, true)
 	}
-	opcodeWith := parser.BuildLeaf(withContent, WITH_TYPES)
+
+	opcodeWith := parser.BuildBranch([]text.Symbol{}, WITH_TYPES)
+	for _, withArg := range withContent {
+		opcodeWith.InsertChild(withArg, true)
+	}
 	opcodeNode.InsertChild(opcodeWith, true)
 	opcodeNode.InsertChild(body, true)
 
-	return opcodeNode, false
+	return opcodeNode, nil
+}
+
+//ParseInline from the source stream
+func ParseInline(stream parser.Stream) (parser.CSTNode, error) {
+	seq, err := parser.RequireSequence(stream, text.KeywordInline, text.Identifier, text.KeywordWith)
+	if err != nil {
+		return nil, err
+	}
+	withContent, invalidWith := parser.AcceptPatternWithTest(stream, text.RoundOpen, text.RoundClose, text.Comma, ParseWithArgs)
+	if invalidWith != nil {
+		return nil, invalidWith
+	}
+	noArrow := parser.Expect(stream, text.SymbolArrow)
+	if noArrow != nil {
+		return nil, noArrow
+	}
+
+	body, bodyErr := ParseBlock(stream)
+	if bodyErr != nil {
+		return nil, bodyErr
+	}
+
+	inlineNode := parser.BuildBranch(seq, INLINE_NODE)
+	inlineWith := parser.BuildBranch([]text.Symbol{}, WITH_TYPES)
+	for _, withArg := range withContent {
+		inlineWith.InsertChild(withArg, true)
+	}
+	inlineNode.InsertChild(inlineWith, true)
+	inlineNode.InsertChild(body, true)
+
+	return inlineNode, nil
+}
+
+//ParseWithArgs after the opcode or inline declaration
+func ParseWithArgs(stream parser.Stream) (parser.CSTNode, error) {
+	arg, err := parser.RequireSequence(stream, text.Identifier, text.Colon, text.Identifier)
+	return parser.BuildLeaf(arg, OPCODE_ARGS), err
 }
 
 //ParseArgs parse the arguments of the opcode
 func ParseArgs(stream parser.Stream) (parser.CSTNode, error) {
 	acc := []text.Symbol{}
-	for stream.Peek().ID() != reserved.DOUBLE_CURLY_CLOSE {
+	for stream.Peek().ID() != text.DoubleCurlyClose {
 		acc = append(acc, stream.Next())
 	}
 	return parser.BuildLeaf(acc, OPCODE_ARGS), nil
@@ -93,21 +125,23 @@ func ParseArgs(stream parser.Stream) (parser.CSTNode, error) {
 //ParseStatement inside a block
 func ParseStatement(stream parser.Stream) (parser.CSTNode, error) {
 	switch stream.Peek().ID() {
-	case reserved.KEYWORD_IF:
+	case text.KeywordIF:
 		return ParseBranch(stream)
-	case reserved.KEYWORD_ERROR:
+	case text.KeywordError:
 		return ParseError(stream)
-	case reserved.KEYWORD_WARNING:
+	case text.KeywordWarning:
 		return ParseWarning(stream)
-	case reserved.KEYWORD_OUT:
+	case text.KeywordOut:
 		return ParseOut(stream)
+	case text.KeywordReturn:
+		return ParseReturn(stream)
 	}
-	return nil, errors.New("Unexpected symbol '" + stream.Peek().Value() + "'")
+	return nil, errors.New("Unexpected symbol '" + stream.Peek().Value() + "', expecting '.if' or '.error' or '.warning' or '.out' or '.return'")
 }
 
 //ParseBlock of code
 func ParseBlock(stream parser.Stream) (parser.CSTNode, error) {
-	body, err := parser.AcceptInsetDelegate(stream, text.CURLY_OPEN, text.CURLY_CLOSE, ParseStatement)
+	body, err := parser.AcceptInsetDelegate(stream, text.CurlyOpen, text.CurlyClose, ParseStatement)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +155,7 @@ func ParseBlock(stream parser.Stream) (parser.CSTNode, error) {
 
 //ParseBranch parse a branch
 func ParseBranch(stream parser.Stream) (parser.CSTNode, error) {
-	parser.Expect(stream, reserved.KEYWORD_IF)
+	parser.Expect(stream, text.KeywordIF)
 	expr, err := ParseExpression(stream)
 	if err != nil {
 		return nil, err
@@ -140,8 +174,10 @@ func ParseBranch(stream parser.Stream) (parser.CSTNode, error) {
 
 //ParseOut parse an out
 func ParseOut(stream parser.Stream) (parser.CSTNode, error) {
-	parser.Expect(stream, reserved.KEYWORD_OUT)
-	exprs, err := parser.AcceptInsetDelegate(stream, text.SQUARE_OPEN, text.SQUARE_CLOSE, ParseExpression)
+	parser.Expect(stream, text.KeywordOut)
+	exprs, err := parser.AcceptInsetDelegate(stream, text.SquareOpen, text.SquareClose, ParseExpression)
+
+	parser.Expect(stream, text.Semicolon)
 
 	outNode := parser.BuildBranch([]text.Symbol{}, STMT_OUT)
 	for _, e := range exprs {
@@ -150,9 +186,24 @@ func ParseOut(stream parser.Stream) (parser.CSTNode, error) {
 	return outNode, err
 }
 
+//ParseReturn parse an out
+func ParseReturn(stream parser.Stream) (parser.CSTNode, error) {
+	parser.Expect(stream, text.KeywordReturn)
+	expr, err := ParseExpression(stream)
+
+	p := stream.Next()
+	if p.ID() != text.Semicolon {
+		return nil, fmt.Errorf("Expected ';', found '%s", p.Value())
+	}
+
+	outNode := parser.BuildBranch([]text.Symbol{}, STMT_RET)
+	outNode.InsertChild(expr, err != nil)
+	return outNode, err
+}
+
 //ParseError parse an out
 func ParseError(stream parser.Stream) (parser.CSTNode, error) {
-	syms, err := parser.RequireSequence(stream, reserved.KEYWORD_ERROR, text.IDENTIFIER, text.COMMA, text.QUOTED_STRING, text.SEMICOLON)
+	syms, err := parser.RequireSequence(stream, text.KeywordError, text.Identifier, text.Comma, text.QuotedString, text.Semicolon)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +212,7 @@ func ParseError(stream parser.Stream) (parser.CSTNode, error) {
 
 //ParseWarning parse an out
 func ParseWarning(stream parser.Stream) (parser.CSTNode, error) {
-	syms, err := parser.RequireSequence(stream, reserved.KEYWORD_WARNING, text.IDENTIFIER, text.COMMA, text.QUOTED_STRING, text.SEMICOLON)
+	syms, err := parser.RequireSequence(stream, text.KeywordWarning, text.Identifier, text.Comma, text.QuotedString, text.Semicolon)
 	if err != nil {
 		return nil, err
 	}
@@ -192,16 +243,16 @@ func testAnyUnaryOperator(t text.Symbol) bool {
 
 func parseTerm(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, error) {
 	t := stream.Next()
-	if t.ID() == text.NUMBER || t.ID() == text.IDENTIFIER {
+	if t.ID() == text.Number || t.ID() == text.Identifier {
 		return append(expr, t), nil
 	}
 
-	if t.ID() == text.ROUND_OPEN {
+	if t.ID() == text.RoundOpen {
 		symbols, errExpr := parseExpression(stream, expr)
 		if errExpr != nil {
 			return nil, errExpr
 		}
-		err := parser.Expect(stream, text.ROUND_CLOSE)
+		err := parser.Expect(stream, text.RoundClose)
 		return symbols, err
 	}
 
@@ -209,8 +260,8 @@ func parseTerm(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, error) 
 		return parseTerm(stream, append(expr, t))
 	}
 
-	if t.ID() == reserved.KEYWORD_EXPR {
-		part1, invalidStart := parser.RequireSequence(stream, text.IDENTIFIER, text.ROUND_OPEN)
+	if t.ID() == text.KeywordExpr {
+		part1, invalidStart := parser.RequireSequence(stream, text.Identifier, text.RoundOpen)
 		if invalidStart != nil {
 			return expr, invalidStart
 		}
@@ -219,7 +270,7 @@ func parseTerm(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, error) 
 
 		begin := true
 
-		for begin || stream.Peek().ID() == text.COMMA {
+		for begin || stream.Peek().ID() == text.Comma {
 			arg, invalidArg := parseExpression(stream, expr)
 			if invalidArg != nil {
 				return expr, invalidArg
@@ -228,7 +279,7 @@ func parseTerm(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, error) 
 			expr = append(expr, arg...)
 		}
 
-		part3, invalidEnd := parser.Require(stream, text.ROUND_CLOSE)
+		part3, invalidEnd := parser.Require(stream, text.RoundClose)
 		if invalidEnd != nil {
 			return expr, invalidEnd
 		}
@@ -236,7 +287,7 @@ func parseTerm(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, error) 
 		expr = append(expr, part3)
 	}
 
-	return expr, errors.New("Unexpected Token " + t.Value())
+	return expr, errors.New("Unexpected Symbol " + t.Value())
 }
 
 func parseFactors(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, error) {

@@ -25,7 +25,6 @@ var followMap = map[rune]Follow{
 	'/':  FollowCommentOpen,
 	'-':  FollowSequence('-', '>'),
 	'%':  FollowNone,
-	'.':  FollowNone,
 	'@':  FollowNone,
 	'#':  FollowNone,
 	',':  FollowNone,
@@ -78,28 +77,6 @@ func TestFastScan(t *testing.T) {
 	fmt.Println("Complete")
 }
 
-func localClassify(t *Token) int32 {
-	size := len(t.slice)
-	if size == 2 {
-		if t.slice[0] == '/' && t.slice[1] == '*' {
-			return 1
-		}
-		if t.slice[0] == '/' && t.slice[1] == '/' {
-			return 4
-		}
-		return 0
-	} else if size == 1 {
-		if t.slice[0] == '"' {
-			return 2
-		} else if t.slice[0] == '\'' {
-			return 3
-		} else if t.slice[0] == '\n' {
-			return 5
-		}
-	}
-	return 0
-}
-
 func TestFullPipeline(t *testing.T) {
 	fileName := "../../tests/parser_test.casm"
 	var file, fileErr = os.Open(fileName)
@@ -120,8 +97,8 @@ func TestFullPipeline(t *testing.T) {
 	for ioErr == nil {
 		tokens, left := FastScan(buffer, false, FromMap(followMap))
 
-		Classify(tokens, localClassify)
-		completed, merged, last = Join(map[int32]int32{1: 1, 2: 2, 3: 3, 4: 5}, tokens, merged, last)
+		ClassifyMergeableTokens(tokens)
+		completed, merged, last = Merge(map[int32]int32{1: 1, 2: 2, 3: 3, 4: 5}, tokens, merged, last)
 
 		line, ioErr = source.ReadBytes('\n')
 		if len(left) == 0 {
@@ -141,7 +118,6 @@ func TestFullPipeline(t *testing.T) {
 	}
 
 	tokens, _ := FastScan(buffer, true, FromMap(followMap))
-	Classify(tokens, localClassify)
-	completed, merged, last = Join(map[int32]int32{1: 1, 2: 2, 3: 3}, tokens, merged, last)
-	t.Error("Prova")
+	ClassifyMergeableTokens(tokens)
+	completed, merged, last = Merge(map[int32]int32{1: 1, 2: 2, 3: 3, 4: 5}, tokens, merged, last)
 }

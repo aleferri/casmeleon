@@ -1,4 +1,4 @@
-package language
+package casm
 
 //Set of a symbol
 type Set struct {

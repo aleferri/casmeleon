@@ -6,5 +6,5 @@ import "github.com/aleferri/casmeleon/pkg/text"
 type Stream interface {
 	Next() text.Symbol
 	Peek() text.Symbol
-	Source() text.Source
+	Source() *text.Source
 }

@@ -11,7 +11,6 @@ func (t *Token) String() string {
 }
 
 //Merge ADJACENTS tokens, mind the capitalized ADJACENTS
-//guaranteed memory corruption error otherwise
 func (t Token) Merge(rhs Token) Token {
 	lLen := len(t.slice)
 	if lLen == 0 {
@@ -23,4 +22,9 @@ func (t Token) Merge(rhs Token) Token {
 	}
 	slice := append([]rune{}, t.slice...)
 	return Token{append(slice, rhs.slice...), 0}
+}
+
+//Runes of the token
+func (t Token) Runes() []rune {
+	return t.slice
 }
