@@ -1,7 +1,5 @@
 package text
 
-import "fmt"
-
 //Source represents a Source File that contains a list of symbols
 type Source struct {
 	fileName  string
@@ -29,18 +27,27 @@ func (s *Source) Append(sym Symbol) {
 	s.symbols = append(s.symbols, sym)
 }
 
+//FindPosition of a symbol inside the source
+func (s *Source) FindPosition(sym Symbol) (string, uint32, uint32) {
+	count := uint32(0)
+	offset := uint32(0)
+	for _, t := range s.symbols {
+		if t.value == sym.value {
+			return s.fileName, count, offset
+		}
+		if t.value == "\n" {
+			count++
+			offset = 0
+		} else {
+			offset++
+		}
+	}
+	return s.fileName, count, offset
+}
+
 //SliceLine return the Line sourrounding the symbol
 func (s *Source) SliceLine(sym Symbol) []Symbol {
 	return s.SliceScope(sym, "\n")
-}
-
-//Println surrounding the element
-func (s *Source) Println(sym Symbol) {
-	syms := s.SliceLine(sym)
-	for _, p := range syms {
-		fmt.Print(p.Value())
-	}
-	fmt.Println()
 }
 
 //SliceScope return the Scope that surround the symbol delimited by the specified delimiter

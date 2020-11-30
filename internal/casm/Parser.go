@@ -58,7 +58,7 @@ func ParseOpcode(stream parser.Stream) (parser.CSTNode, error) {
 
 	body, bodyErr := ParseBlock(stream)
 	if bodyErr != nil {
-		return nil, bodyErr
+		return nil, DecorateError(bodyErr, ".opcode")
 	}
 
 	opcodeNode := parser.BuildBranch(seq, OPCODE_NODE)
@@ -93,7 +93,7 @@ func ParseInline(stream parser.Stream) (parser.CSTNode, error) {
 
 	body, bodyErr := ParseBlock(stream)
 	if bodyErr != nil {
-		return nil, bodyErr
+		return nil, DecorateError(bodyErr, ".inline")
 	}
 
 	inlineNode := parser.BuildBranch(seq, INLINE_NODE)
@@ -175,7 +175,7 @@ func ParseBranch(stream parser.Stream) (parser.CSTNode, error) {
 //ParseOut parse an out
 func ParseOut(stream parser.Stream) (parser.CSTNode, error) {
 	parser.Expect(stream, text.KeywordOut)
-	exprs, err := parser.AcceptInsetDelegate(stream, text.SquareOpen, text.SquareClose, ParseExpression)
+	exprs, err := parser.AcceptPatternWithTest(stream, text.SquareOpen, text.SquareClose, text.Comma, ParseExpression)
 
 	parser.Expect(stream, text.Semicolon)
 
@@ -220,7 +220,6 @@ func ParseWarning(stream parser.Stream) (parser.CSTNode, error) {
 }
 
 var allBinaryOperators = []string{"+", "-", "*", "/", "%", "<<", ">>", "^", "&", "|", "&&", "||", "==", "!=", ">", "<", ">=", "<=", ".in", ".get"}
-var allUnaryOperators = []string{"+", "-", "!", "~"}
 
 func testAnyBinaryOperator(stream parser.Stream) bool {
 	t := stream.Peek()
@@ -232,62 +231,65 @@ func testAnyBinaryOperator(stream parser.Stream) bool {
 	return false
 }
 
-func testAnyUnaryOperator(t text.Symbol) bool {
-	for _, p := range allBinaryOperators {
-		if t.Value() == p {
-			return true
-		}
-	}
-	return false
-}
-
 func parseTerm(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, error) {
 	t := stream.Next()
-	if t.ID() == text.Number || t.ID() == text.Identifier {
-		return append(expr, t), nil
-	}
 
-	if t.ID() == text.RoundOpen {
-		symbols, errExpr := parseExpression(stream, expr)
-		if errExpr != nil {
-			return nil, errExpr
+	switch t.ID() {
+	case text.Number, text.Identifier:
+		{
+			return append(expr, t), nil
 		}
-		err := parser.Expect(stream, text.RoundClose)
-		return symbols, err
-	}
-
-	if testAnyUnaryOperator(t) {
-		return parseTerm(stream, append(expr, t))
-	}
-
-	if t.ID() == text.KeywordExpr {
-		part1, invalidStart := parser.RequireSequence(stream, text.Identifier, text.RoundOpen)
-		if invalidStart != nil {
-			return expr, invalidStart
+	case text.RoundOpen:
+		{
+			symbols, errExpr := parseExpression(stream, expr)
+			if errExpr != nil {
+				return nil, errExpr
+			}
+			err := parser.Expect(stream, text.RoundClose)
+			return symbols, err
 		}
-
-		expr = append(expr, part1...)
-
-		begin := true
-
-		for begin || stream.Peek().ID() == text.Comma {
-			arg, invalidArg := parseExpression(stream, expr)
-			if invalidArg != nil {
-				return expr, invalidArg
+	case text.OperatorNeg, text.OperatorNot, text.OperatorPlus, text.OperatorMinus:
+		{
+			return parseTerm(stream, append(expr, t))
+		}
+	case text.KeywordExpr:
+		{
+			part1, invalidStart := parser.RequireSequence(stream, text.Identifier, text.RoundOpen)
+			if invalidStart != nil {
+				return expr, invalidStart
 			}
 
-			expr = append(expr, arg...)
-		}
+			expr = append(expr, part1...)
 
-		part3, invalidEnd := parser.Require(stream, text.RoundClose)
-		if invalidEnd != nil {
-			return expr, invalidEnd
-		}
+			readNextParam := stream.Peek().ID() != text.RoundClose
 
-		expr = append(expr, part3)
+			for readNextParam {
+				arg, invalidArg := parseExpression(stream, expr)
+				if invalidArg != nil {
+					return expr, invalidArg
+				}
+
+				expr = append(expr, arg...)
+
+				if stream.Peek().ID() == text.Comma {
+					expr = append(expr, stream.Next())
+				} else {
+					readNextParam = false
+				}
+			}
+
+			part3, invalidEnd := parser.Require(stream, text.RoundClose)
+			if invalidEnd != nil {
+				return expr, invalidEnd
+			}
+
+			return append(expr, part3), nil
+		}
+	default:
+		{
+			return expr, parser.UnexpectedSymbol(text.Identifier, t, "Unexpected Symbol '%s', was expecting a term like <%s>")
+		}
 	}
-
-	return expr, errors.New("Unexpected Symbol " + t.Value())
 }
 
 func parseFactors(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, error) {
@@ -310,7 +312,7 @@ func parseExpression(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, e
 //ParseExpression of any kind
 func ParseExpression(stream parser.Stream) (parser.CSTNode, error) {
 	expr, err := parseExpression(stream, []text.Symbol{})
-	if err != nil {
+	if err == nil {
 		return parser.BuildLeaf(expr, EXPRESSION), nil
 	}
 	return nil, err

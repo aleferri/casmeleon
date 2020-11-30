@@ -15,6 +15,9 @@ func IdentifySymbol(s []rune, fileOffset uint32, count uint32) text.Symbol {
 	if unicode.IsDigit(s[0]) {
 		return text.SymbolOf(fileOffset, count, string(s), text.Number)
 	}
+	if s[0] == '\n' || s[0] == '\r' {
+		return text.SymbolOf(fileOffset, count, string(s), text.EOL)
+	}
 	if unicode.IsSpace(s[0]) {
 		return text.SymbolOf(fileOffset, count, string(s), text.WHITESPACE)
 	}
@@ -73,7 +76,7 @@ func (s *SymbolsStream) Buffer() {
 		for _, t := range scanned {
 			sym := IdentifySymbol(t.Runes(), s.repo.FileIndex(), s.repo.Count())
 			s.repo.Append(sym)
-			if sym.ID() != text.WHITESPACE {
+			if sym.ID() > 3 {
 				s.buffer = append(s.buffer, sym)
 			}
 		}

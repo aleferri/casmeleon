@@ -101,3 +101,8 @@ func (s Symbol) Value() string {
 func (s *Symbol) String() string {
 	return fmt.Sprint("\\ ", s.value, " \\", " at ", s.fileOffset)
 }
+
+//Equals between symbols
+func (s Symbol) Equals(d Symbol) bool {
+	return s.fileOffset == d.fileOffset && s.symOffset == d.symOffset
+}

@@ -133,17 +133,19 @@ func AcceptPatternWithTest(stream Stream, left uint32, right uint32, test uint32
 		return leafs, matchLeft
 	}
 
-	first := true
-	for peek := stream.Peek().ID(); peek != right && (peek == test || first); peek = stream.Peek().ID() {
-		if !first {
-			stream.Next()
-		}
+	readNext := stream.Peek().ID() != right
+	for readNext {
 		part, err := dg(stream)
 		if err != nil {
 			return leafs, err
 		}
 		leafs = append(leafs, part)
-		first = false
+
+		if stream.Peek().ID() == test {
+			stream.Next()
+		} else {
+			readNext = false
+		}
 	}
 	matchRight := Expect(stream, right)
 	return leafs, matchRight
