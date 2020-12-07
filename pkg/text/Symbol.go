@@ -35,8 +35,10 @@ const (
 	CommentLine
 	QuotedString
 	QuotedChar
+	OperatorPlusUnary
 	OperatorPlus
 	OperatorMinus
+	OperatorMinusUnary
 	OperatorMul
 	OperatorDiv
 	OperatorMod

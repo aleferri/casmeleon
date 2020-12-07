@@ -1,12 +1,24 @@
 package casm
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+
+	"github.com/aleferri/casmeleon/pkg/parser"
+)
 
 //NumberBase is a base accepted into the language
 type NumberBase struct {
 	n      uint32
 	prefix string
 	suffix string
+}
+
+//PruneToNumBase create a NumberBase from a CSTNode
+func PruneToNumBase(cst parser.CSTNode) (NumberBase, error) {
+	tokens := cst.Symbols()
+	n, err := strconv.ParseUint(tokens[0].Value(), 10, 1)
+	return NumberBase{n: uint32(n), prefix: tokens[1].Value(), suffix: tokens[2].Value()}, err
 }
 
 //DIGITS of a number

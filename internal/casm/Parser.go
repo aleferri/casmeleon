@@ -8,6 +8,52 @@ import (
 	"github.com/aleferri/casmeleon/pkg/text"
 )
 
+func ParseCasm(stream parser.Stream, repo text.Source) (parser.CSTNode, error) {
+	errFound := false
+
+	id := stream.Peek().ID()
+
+	root := parser.BuildBranch([]text.Symbol{}, ROOT_NODE)
+	var err error
+
+	for id != text.EOF && !errFound {
+		var cst parser.CSTNode
+
+		switch id {
+		case text.KeywordInline:
+			{
+				cst, err = ParseInline(stream)
+			}
+		case text.KeywordOpcode:
+			{
+				cst, err = ParseOpcode(stream)
+			}
+		case text.KeywordNum:
+			{
+				cst, err = ParseNumberBase(stream)
+			}
+		case text.KeywordSet:
+			{
+				cst, err = ParseSet(stream)
+			}
+		default:
+			{
+				fmt.Println(len(idDescriptor))
+				err = fmt.Errorf("Undefined symbol '%s'", idDescriptor[id])
+			}
+		}
+
+		if err != nil {
+			errFound = true
+		} else {
+			root.InsertChild(cst, true)
+		}
+
+		id = stream.Peek().ID()
+	}
+	return root, err
+}
+
 //ParseNumberBase parse a number base directive
 func ParseNumberBase(stream parser.Stream) (parser.CSTNode, error) {
 	seq, err := parser.RequireSequence(stream, text.KeywordNum, text.Number, text.QuotedString, text.QuotedString)
@@ -62,9 +108,13 @@ func ParseOpcode(stream parser.Stream) (parser.CSTNode, error) {
 	}
 
 	opcodeNode := parser.BuildBranch(seq, OPCODE_NODE)
+
+	opcodeFormat := parser.BuildBranch(seq, OPCODEFORMAT)
 	for _, arg := range args {
-		opcodeNode.InsertChild(arg, true)
+		opcodeFormat.InsertChild(arg, true)
 	}
+
+	opcodeNode.InsertChild(opcodeFormat, true)
 
 	opcodeWith := parser.BuildBranch([]text.Symbol{}, WITH_TYPES)
 	for _, withArg := range withContent {
@@ -169,6 +219,16 @@ func ParseBranch(stream parser.Stream) (parser.CSTNode, error) {
 	branch := parser.BuildBranch([]text.Symbol{}, STMT_BRANCH)
 	branch.InsertChild(expr, true)
 	branch.InsertChild(block, true)
+
+	if stream.Peek().ID() == text.KeywordELSE {
+		stream.Next()
+		elseBlock, errElse := ParseBlock(stream)
+		if errElse != nil {
+			return nil, errBlock
+		}
+		branch.InsertChild(elseBlock, true)
+	}
+
 	return branch, nil
 }
 
@@ -193,11 +253,11 @@ func ParseReturn(stream parser.Stream) (parser.CSTNode, error) {
 
 	p := stream.Next()
 	if p.ID() != text.Semicolon {
-		return nil, fmt.Errorf("Expected ';', found '%s", p.Value())
+		return nil, parser.UnexpectedSymbol(text.Semicolon, p, "Found unexpected token '%s', expected '%s' instead")
 	}
 
 	outNode := parser.BuildBranch([]text.Symbol{}, STMT_RET)
-	outNode.InsertChild(expr, err != nil)
+	outNode.InsertChild(expr, err == nil)
 	return outNode, err
 }
 
@@ -223,6 +283,9 @@ var allBinaryOperators = []string{"+", "-", "*", "/", "%", "<<", ">>", "^", "&",
 
 func testAnyBinaryOperator(stream parser.Stream) bool {
 	t := stream.Peek()
+	if t.ID() == text.OperatorMinusUnary || t.ID() == text.OperatorPlusUnary {
+		return false
+	}
 	for _, p := range allBinaryOperators {
 		if t.Value() == p {
 			return true
@@ -241,15 +304,21 @@ func parseTerm(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, error) 
 		}
 	case text.RoundOpen:
 		{
-			symbols, errExpr := parseExpression(stream, expr)
+			symbols, errExpr := parseFactors(stream, append(expr, t))
 			if errExpr != nil {
 				return nil, errExpr
 			}
-			err := parser.Expect(stream, text.RoundClose)
+			cls, err := parser.Require(stream, text.RoundClose)
+			symbols = append(symbols, cls)
 			return symbols, err
 		}
 	case text.OperatorNeg, text.OperatorNot, text.OperatorPlus, text.OperatorMinus:
 		{
+			if t.ID() == text.OperatorPlus {
+				return parseTerm(stream, append(expr, t.WithID(text.OperatorPlusUnary)))
+			} else if t.ID() == text.OperatorMinus {
+				return parseTerm(stream, append(expr, t.WithID(text.OperatorMinusUnary)))
+			}
 			return parseTerm(stream, append(expr, t))
 		}
 	case text.KeywordExpr:
@@ -259,17 +328,18 @@ func parseTerm(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, error) 
 				return expr, invalidStart
 			}
 
+			expr = append(expr, t)
 			expr = append(expr, part1...)
 
 			readNextParam := stream.Peek().ID() != text.RoundClose
 
 			for readNextParam {
-				arg, invalidArg := parseExpression(stream, expr)
+				arg, invalidArg := parseFactors(stream, expr)
 				if invalidArg != nil {
 					return expr, invalidArg
 				}
 
-				expr = append(expr, arg...)
+				expr = arg
 
 				if stream.Peek().ID() == text.Comma {
 					expr = append(expr, stream.Next())
@@ -305,13 +375,9 @@ func parseFactors(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, erro
 	return partial, nil
 }
 
-func parseExpression(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, error) {
-	return parseFactors(stream, expr)
-}
-
 //ParseExpression of any kind
 func ParseExpression(stream parser.Stream) (parser.CSTNode, error) {
-	expr, err := parseExpression(stream, []text.Symbol{})
+	expr, err := parseFactors(stream, []text.Symbol{})
 	if err == nil {
 		return parser.BuildLeaf(expr, EXPRESSION), nil
 	}

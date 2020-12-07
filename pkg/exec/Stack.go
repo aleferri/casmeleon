@@ -1,27 +1,24 @@
 package exec
 
-//Stack structure for evaluation purpose
+//Stack is the standard stack structure
 type Stack struct {
-	content []uint32
+	content []int64
 }
 
-//Push value into the stack
-func (s *Stack) Push(i uint32) {
+//Push new content on top of the stack
+func (s *Stack) Push(i int64) {
 	s.content = append(s.content, i)
 }
 
-//Pop value into the stack
-func (s *Stack) Pop() uint32 {
-	len := len(s.content)
-	val := s.content[len-1]
-	s.content = s.content[:len-1]
+//Pop content from the top of the stack
+func (s *Stack) Pop() int64 {
+	l := len(s.content)
+	val := s.content[l-1]
+	s.content = s.content[:l-1]
 	return val
 }
 
-//BuildStack build the Stack structure
-func BuildStack() Stack {
-	return Stack{content: []uint32{}}
+//EmptyStack create an empty stack
+func EmptyStack() Stack {
+	return Stack{content: []int64{}}
 }
-
-//StackApplicable is function that can be applied in a stack
-type StackApplicable func(s *Stack, values []uint32)

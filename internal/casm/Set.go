@@ -15,18 +15,24 @@ func (s *Set) Contains(n string) bool {
 }
 
 //Value of the specified symbol
-func (s *Set) Value(n string) uint32 {
-	return uint32(s.valueOf(n))
+func (s *Set) Value(n string) (uint32, bool) {
+	v := s.valueOf(n)
+	return uint32(v), v > -1
 }
 
 func generateFindValue(list []string) func(string) int32 {
 	return func(str string) int32 {
-		return 0
+		for i, s := range list {
+			if s == str {
+				return int32(i)
+			}
+		}
+		return -1
 	}
 }
 
 //PruneToSet reduce the Concrete Syntax Tree Branch of a Set declaration to a type
-func PruneToSet(node *parser.CSTBranch, index uint32) Set {
+func PruneToSet(node parser.CSTNode, index uint32) Set {
 	name := node.Symbols()[1]
 	values := []string{}
 	for i := 2; i < len(node.Symbols()); i += 2 {

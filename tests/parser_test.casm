@@ -26,21 +26,21 @@
 
 .inline ALU_OPCODE_IM
 .with ( r : Regs, op : BinaryOps ) -> {
-    .return ( 0b00 << 6 ) + ( REG << 4 ) + op;
+    .return ( 0b00 << 6 ) + ( r << 4 ) + op;
 }
 
 .inline ALU_OPCODE_ZP
 .with ( r : Regs, op : BinaryOps ) -> {
-    .return ( 0b00 << 6 ) + ( REG << 4 ) + ( 0b1 << 3 ) + op;
+    .return ( 0b00 << 6 ) + ( r << 4 ) + ( 0b1 << 3 ) + op;
 }
 
 .inline ALU_OPCODE_RU
 .with ( r : Regs, op : UnaryOps ) -> {
-    .return ( 0b10 << 6 ) + ( REG << 4 ) + ( ob1 << 3 ) + op;
+    .return ( 0b10 << 6 ) + ( r << 4 ) + ( ob1 << 3 ) + op;
 }
 
 .opcode LD {{ r, #imm8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, imm8 : Ints ) -> {
     .if imm8 > 255 {
         .error addr8, "Cannot embed 8+ bits of address inside the instruction, use LD16 instead";
     }
@@ -49,20 +49,20 @@
 }
 
 .opcode LD16 {{ r, #imm16 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, imm16 : Ints ) -> {
     .out [ 0b10000000 + ( r << 4 ), 2, 0b01000100, 2, imm16 >> 8, imm16 & 255 ];
 }
 
 .opcode LD {{ r, zp8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, zp8 : Ints ) -> {
     .if zp8 > 255 {
-        .error addr8, "Zero page is restricted to the first 256 words";
+        .error zp8, "Zero page is restricted to the first 256 words";
     }
-    .out [ .expr ALU_OPCODE_ZP( r, OP_MOV ), imm8 ];
+    .out [ .expr ALU_OPCODE_ZP( r, OP_MOV ), zp8 ];
 }
 
 .opcode LD {{ r, ( y, offset ) }}
-.with ( r : Regs, y : Regs ) -> {
+.with ( r : Regs, y : Regs, offset : Ints ) -> {
     .if offset > 255 {
         .error addr8, "Offset must be less than 256";
     }
@@ -70,7 +70,7 @@
 }
 
 .opcode ST {{ r, zp8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, zp8 : Ints ) -> {
     .if zp8 > 255 {
         .error addr8, "Zero page is restricted to the first 256 words";
     }
@@ -78,7 +78,7 @@
 }
 
 .opcode ST {{ r, ( y, offset ) }}
-.with ( r : Regs, y : Regs ) -> {
+.with ( r : Regs, y : Regs, offset : Ints ) -> {
     .if offset > 255 {
         .error addr8, "Zero page is restricted to the first 256 words";
     }
@@ -86,7 +86,7 @@
 }
 
 .opcode BEQ {{ r, addr16 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, addr16 : Ints ) -> {
     .if ( addr16 - .addr ) > 128 || ( addr16 - .addr ) < -126 {
         .error addr8, "Cannot branch outside the -126,128 address range";
     }
@@ -94,7 +94,7 @@
 }
 
 .opcode BNE {{ r, addr16 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, addr16 : Ints ) -> {
     .if ( addr16 - .addr ) > 255 {
         .error addr8, "Cannot branch outside the -126,128 address range";
     }
@@ -102,7 +102,7 @@
 }
 
 .opcode JMP {{ addr16 }}
-.with ( ) -> {
+.with ( addr16 : Ints ) -> {
     .if ( addr16 - .addr ) > 255 {
         .error addr8, "Cannot branch outside the -126,128 address range";
     }
@@ -127,7 +127,7 @@
 
 // Binary ALU IMM
 .opcode ADD {{ r, #imm8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, imm8 : Ints ) -> {
     .if imm8 > 255 {
         .error addr8, "Cannot embed 8+ bits of address inside the instruction";
     }
@@ -135,7 +135,7 @@
 }
 
 .opcode SUB {{ r, #imm8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, imm8 : Ints ) -> {
     .if imm8 > 255 {
         .error addr8, "Cannot embed 8+ bits of address inside the instruction";
     }
@@ -143,7 +143,7 @@
 }
 
 .opcode CMP {{ r, #imm8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, imm8 : Ints ) -> {
     .if imm8 > 255 {
         .error addr8, "Cannot embed 8+ bits of address inside the instruction";
     }
@@ -151,7 +151,7 @@
 }
 
 .opcode AND {{ r, #imm8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, imm8 : Ints ) -> {
     .if imm8 > 255 {
         .error addr8, "Cannot embed 8+ bits of address inside the instruction";
     }
@@ -159,7 +159,7 @@
 }
 
 .opcode ORA {{ r, #imm8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, imm8 : Ints ) -> {
     .if imm8 > 255 {
         .error addr8, "Cannot embed 8+ bits of address inside the instruction";
     }
@@ -167,7 +167,7 @@
 }
 
 .opcode EOR {{ r, #imm8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, imm8 : Ints ) -> {
     .if imm8 > 255 {
         .error addr8, "Cannot embed 8+ bits of address inside the instruction";
     }
@@ -176,7 +176,7 @@
 
 // Binary ALU IMM
 .opcode ADD {{ r, zp8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, zp8 : Ints ) -> {
     .if zp8 > 255 {
         .error addr8, "ZeroPage is limited to the first 256 locations of memory";
     }
@@ -184,7 +184,7 @@
 }
 
 .opcode SUB {{ r, zp8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, zp8 : Ints ) -> {
     .if zp8 > 255 {
         .error addr8, "ZeroPage is limited to the first 256 locations of memory";
     }
@@ -192,7 +192,7 @@
 }
 
 .opcode CMP {{ r, zp8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, zp8 : Ints ) -> {
     .if zp8 > 255 {
         .error addr8, "ZeroPage is limited to the first 256 locations of memory";
     }
@@ -200,7 +200,7 @@
 }
 
 .opcode AND {{ r, zp8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, zp8 : Ints ) -> {
     .if zp8 > 255 {
         .error addr8, "ZeroPage is limited to the first 256 locations of memory";
     }
@@ -208,7 +208,7 @@
 }
 
 .opcode ORA {{ r, zp8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, zp8 : Ints ) -> {
     .if zp8 > 255 {
         .error addr8, "ZeroPage is limited to the first 256 locations of memory";
     }
@@ -216,7 +216,7 @@
 }
 
 .opcode EOR {{ r, zp8 }}
-.with ( r : Regs ) -> {
+.with ( r : Regs, zp8 : Ints ) -> {
     .if zp8 > 255 {
         .error addr8, "ZeroPage is limited to the first 256 locations of memory";
     }
@@ -224,7 +224,7 @@
 }
 
 .opcode CALL {{ addr16 }}
-.with () -> {
+.with (addr16 : Ints) -> {
     // 16° word is the "Link" register, so:
     // ST P, 16
     // LD P, (P, 1)
