@@ -71,7 +71,8 @@ const (
 	KeywordReturn
 	Number
 	Identifier
-	LastReservedToken = Identifier
+	ExactMatchKeyword
+	LastReservedToken = ExactMatchKeyword
 )
 
 //SymbolOf create a Symbol from the provided parameters

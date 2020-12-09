@@ -1,7 +1,6 @@
 package casm
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aleferri/casmeleon/pkg/parser"
@@ -104,7 +103,7 @@ func ParseOpcode(stream parser.Stream) (parser.CSTNode, error) {
 
 	body, bodyErr := ParseBlock(stream)
 	if bodyErr != nil {
-		return nil, DecorateError(bodyErr, ".opcode")
+		return nil, WrapMatchError(bodyErr, ".opcode", "}")
 	}
 
 	opcodeNode := parser.BuildBranch(seq, OPCODE_NODE)
@@ -143,7 +142,7 @@ func ParseInline(stream parser.Stream) (parser.CSTNode, error) {
 
 	body, bodyErr := ParseBlock(stream)
 	if bodyErr != nil {
-		return nil, DecorateError(bodyErr, ".inline")
+		return nil, WrapMatchError(bodyErr, ".inline", "}")
 	}
 
 	inlineNode := parser.BuildBranch(seq, INLINE_NODE)
@@ -186,7 +185,10 @@ func ParseStatement(stream parser.Stream) (parser.CSTNode, error) {
 	case text.KeywordReturn:
 		return ParseReturn(stream)
 	}
-	return nil, errors.New("Unexpected symbol '" + stream.Peek().Value() + "', expecting '.if' or '.error' or '.warning' or '.out' or '.return'")
+	return nil, parser.ExpectedAnyOf(
+		stream.Peek(), "Unexpected symbol '%s', was expecting: '%s'",
+		text.KeywordIF, text.KeywordOut, text.KeywordReturn, text.KeywordError, text.KeywordWarning,
+	)
 }
 
 //ParseBlock of code

@@ -22,6 +22,40 @@ func (o Opcode) Name() string {
 	return o.name
 }
 
+func (o Opcode) Format() []uint32 {
+	return o.format
+}
+
+func (o Opcode) StringifyFormat(lang *Language) []string {
+	desc := []string{}
+
+	ids := 0
+	for _, particle := range o.format {
+		if particle == text.Identifier {
+			desc = append(desc, lang.sets[o.types[ids]].name)
+			ids++
+		} else {
+			desc = append(desc, idDescriptor[particle])
+		}
+	}
+
+	return desc
+}
+
+func (o Opcode) Accept(format []uint32, types []uint32) bool {
+	return false
+}
+
+func StringifyFormat(format []uint32) []string {
+	desc := []string{}
+
+	for _, particle := range format {
+		desc = append(desc, idDescriptor[particle])
+	}
+
+	return desc
+}
+
 //Param Types
 const (
 	NUMBER = 0
@@ -39,18 +73,11 @@ func PruneToOpcode(lang *Language, op parser.CSTNode) (Opcode, parser.CSTNode, e
 		return Opcode{}, nil, err
 	}
 
-	parsedFormat := children[0]
+	parsedFormat := children[0].Children()
 	argsFormat := []uint32{}
 
-	for _, f := range parsedFormat.Symbols() {
-		if f.ID() == text.Identifier {
-			id, ok := argsLUT[f.Value()]
-			if !ok {
-				labels, _ := lang.SetByName("_FormatLabels")
-				id = labels.index
-			}
-			argsFormat = append(argsFormat, id)
-		} else {
+	if len(parsedFormat) > 0 {
+		for _, f := range parsedFormat[0].Symbols() {
 			argsFormat = append(argsFormat, f.ID())
 		}
 	}

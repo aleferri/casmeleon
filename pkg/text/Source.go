@@ -1,5 +1,10 @@
 package text
 
+import (
+	"fmt"
+	"unicode/utf8"
+)
+
 //Source represents a Source File that contains a list of symbols
 type Source struct {
 	fileName  string
@@ -57,6 +62,18 @@ func (s *Source) SliceScope(sym Symbol, delimiter string) []Symbol {
 	return s.symbols[prev:next]
 }
 
+func (s *Source) FindDelimiter(offset uint32, direction int, delimiter string) uint32 {
+	maxLen := len(s.symbols)
+
+	index := int(offset)
+
+	for index > 0 && index < maxLen && s.symbols[index].value != delimiter {
+		index += direction
+	}
+
+	return uint32(index)
+}
+
 //FindPrevDelimiter find the previous delimiter from the symbol sym
 func (s *Source) FindPrevDelimiter(sym Symbol, delimiter string) uint32 {
 	offset := sym.symOffset
@@ -78,4 +95,38 @@ func (s *Source) FindNextDelimiter(sym Symbol, delimiter string) uint32 {
 		offset++
 	}
 	return offset
+}
+
+//PrintContext of a message
+func (s *Source) PrintContext(context MessageContext) {
+	left := s.FindDelimiter(context.symOffset, -1, context.scopeLeft)
+	startLine := s.FindDelimiter(context.symOffset, -1, "\n")
+	endLine := s.FindDelimiter(context.symOffset, 1, "\n")
+	right := s.FindDelimiter(context.symOffset, 1, context.scopeRight)
+
+	if right < endLine {
+		right = endLine
+	}
+
+	for _, t := range s.symbols[left:endLine] {
+		fmt.Print(t.Value())
+	}
+
+	for _, k := range s.symbols[startLine+1 : endLine] {
+		char := ""
+		if k.symOffset == context.symOffset {
+			char = "^"
+		} else if k.ID() > 2 {
+			char = "-"
+		}
+		runeCount := utf8.RuneCountInString(k.Value())
+		for k := 0; k < runeCount; k++ {
+			fmt.Print(char)
+		}
+	}
+
+	for _, e := range s.symbols[endLine+1 : right] {
+		fmt.Print(e.Value())
+	}
+	fmt.Println()
 }

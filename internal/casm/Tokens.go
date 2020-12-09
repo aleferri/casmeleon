@@ -51,10 +51,10 @@ var identifyMap = map[string]uint32{
 
 var idDescriptor = []string{
 	"No Token", "End of Line", "End Of File", "Whitespace", "(", ")", "[", "]", "{", "}", "{{", "}}", ",", ":", ";",
-	"@", "#", "->", "/*", "*/", "//", "Quoted String", "Quoted Char", "+", "-", "*", "/", "%", ">>", "<<", "&", "&&",
+	"@", "#", "->", "/*", "*/", "//", "Quoted String", "Quoted Char", "Unary +", "+", "Unary -", "-", "*", "/", "%", ">>", "<<", "&", "&&",
 	"|", "||", "^", "!", "~", "<", "==", "<=", ">=", ">", "!=", ".if keyword", ".else keyword", ".out keyword", ".set keyword",
 	".num keyword", ".inline keyword", ".opcode keyword", ".with keyword", ".expr keyword", ".warning keyword", ".error keyword",
-	".return keyword", "number", "identifier", "Errore di fuori indice",
+	".return keyword", "number", "identifier", "text label", "Errore di fuori indice",
 }
 
 var temporaryTokenMarks = map[int32]int32{1: 1, 2: 2, 3: 3, 4: 5}

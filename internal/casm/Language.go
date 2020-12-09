@@ -52,10 +52,11 @@ func (l *Language) MarkAddressUsed() {
 }
 
 func (l *Language) FilterOpcodesByName(name string) FilterWindow {
-	wnd := FilterWindow{}
+	wnd := FilterWindow{[]string{}, []Opcode{}, []bool{}}
 	for _, op := range l.opcodes {
 		if op.name == name {
 			wnd.filtered = append(wnd.filtered, op)
+			wnd.lenMatches = append(wnd.lenMatches, len(op.format) == 0)
 		}
 	}
 	return wnd

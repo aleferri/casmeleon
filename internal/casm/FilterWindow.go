@@ -33,3 +33,7 @@ func (win FilterWindow) PickFirst() (Opcode, error) {
 	}
 	return Opcode{}, errors.New("No opcode found for provided parameters")
 }
+
+func (win FilterWindow) Candidates() []Opcode {
+	return win.filtered
+}

@@ -64,7 +64,7 @@ func (s *AssemblyStream) Buffer() {
 
 		temps, _ := scanner.FastScan(runes, ioErr != nil, scanFollowMap)
 
-		scanner.ClassifyMergeableTokens(temps)
+		scanner.ClassifyBasicASMTokens(temps)
 		scanned := scanner.MergeASMLine(temps)
 
 		for _, t := range scanned {

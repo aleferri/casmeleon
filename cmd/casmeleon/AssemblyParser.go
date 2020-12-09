@@ -26,14 +26,20 @@ func ParseSourceLine(lang casm.Language, stream parser.Stream) error {
 		case ".advance":
 			{
 				parser.Require(stream, text.Number)
+				parser.Consume(stream, text.WHITESPACE)
+				lastToken = stream.Next()
 			}
 		case ".org":
 			{
 				parser.Require(stream, text.Number)
+				parser.Consume(stream, text.WHITESPACE)
+				lastToken = stream.Next()
 			}
 		case ".alias":
 			{
 				parser.RequireSequence(stream, text.Identifier, text.Number)
+				parser.Consume(stream, text.WHITESPACE)
+				lastToken = stream.Next()
 			}
 		case ".db":
 			{
@@ -45,16 +51,17 @@ func ParseSourceLine(lang casm.Language, stream parser.Stream) error {
 			}
 		}
 		if lastToken.ID() != text.EOL {
-			return errors.New("Expected End Of Line after a directive")
+			return fmt.Errorf("Expected End Of Line after the directive '%s', found instead '%s'", name.Value(), lastToken.Value())
 		}
-		fmt.Println("Successfully parsed a directive")
+		fmt.Println("Successfully parsed the directive ", name.Value())
 		return nil
 	} else {
 		if stream.Peek().ID() == text.Colon {
 			stream.Next()
+			fmt.Println("Found label: ", name.Value())
 			return ParseSourceLine(lang, stream)
 		} else {
-			lastToken := name
+			lastToken := stream.Next()
 
 			args := []text.Symbol{}
 			format := []uint32{}
@@ -66,11 +73,17 @@ func ParseSourceLine(lang casm.Language, stream parser.Stream) error {
 			}
 
 			win := lang.FilterOpcodesByName(name.Value())
+			fmt.Println("Candidates number for ", name.Value(), ":", len(win.Candidates()))
+			list := win.Candidates()
+			for _, opc := range list {
+				fmt.Println("Available format: ", opc.StringifyFormat(&lang))
+			}
+			fmt.Println("Provided Format: ", casm.StringifyFormat(format))
 			win = win.FilterByFormat(format)
 
 			op, err := win.PickFirst()
 			if err != nil {
-				return errors.New("Invalid opcode")
+				return errors.New("Invalid opcode " + name.Value())
 			}
 
 			fmt.Println("Successfully got opcode " + op.Name())

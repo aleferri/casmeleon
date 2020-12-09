@@ -9,7 +9,7 @@ const (
 
 //MatchError is the error found during match
 type MatchError struct {
-	expected uint32
+	expected ExpectedOptions
 	found    text.Symbol
 	message  string
 	errCode  uint32
@@ -20,7 +20,7 @@ func (m *MatchError) Error() string {
 }
 
 //Expected symbol
-func (m *MatchError) Expected() uint32 {
+func (m *MatchError) Expected() ExpectedOptions {
 	return m.expected
 }
 
@@ -31,13 +31,15 @@ func (m *MatchError) Found() text.Symbol {
 
 //UnexpectedSymbol found
 func UnexpectedSymbol(expected uint32, found text.Symbol, message string) error {
-	return &MatchError{expected: expected, found: found, message: message, errCode: NOMATCH}
+	return &MatchError{expected: MakeExpectedKind(expected), found: found, message: message, errCode: NOMATCH}
 }
 
-//MatchPatternError is the error found during pattern matching
-type MatchPatternError struct {
-	pattern []uint32
-	found   []text.Symbol
-	message string
-	errCode uint32
+//ExpectedAnyOf following the list of allowed symbols
+func ExpectedAnyOf(wrong text.Symbol, message string, list ...uint32) *MatchError {
+	return &MatchError{expected: MakeExpectedAny(list...), found: wrong, message: message, errCode: NOMATCH}
+}
+
+//ExpectedSymbol return an error for an unmatched expected symbol
+func ExpectedSymbol(wrong text.Symbol, message string, kind uint32) *MatchError {
+	return &MatchError{expected: MakeExpectedKind(kind), found: wrong, message: message, errCode: NOMATCH}
 }
