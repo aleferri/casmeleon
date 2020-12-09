@@ -255,7 +255,7 @@ func ParseReturn(stream parser.Stream) (parser.CSTNode, error) {
 
 	p := stream.Next()
 	if p.ID() != text.Semicolon {
-		return nil, parser.UnexpectedSymbol(text.Semicolon, p, "Found unexpected token '%s', expected '%s' instead")
+		return nil, parser.ExpectedSymbol(p, "Found unexpected token '%s', expected '%s' instead", text.Semicolon)
 	}
 
 	outNode := parser.BuildBranch([]text.Symbol{}, STMT_RET)
@@ -359,7 +359,7 @@ func parseTerm(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, error) 
 		}
 	default:
 		{
-			return expr, parser.UnexpectedSymbol(text.Identifier, t, "Unexpected Symbol '%s', was expecting a term like <%s>")
+			return expr, parser.ExpectedSymbol(t, "Unexpected Symbol '%s', was expecting a term like %s", text.Identifier)
 		}
 	}
 }

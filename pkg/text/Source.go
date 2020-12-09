@@ -2,6 +2,7 @@ package text
 
 import (
 	"fmt"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -34,20 +35,21 @@ func (s *Source) Append(sym Symbol) {
 
 //FindPosition of a symbol inside the source
 func (s *Source) FindPosition(sym Symbol) (string, uint32, uint32) {
-	count := uint32(0)
+	line := uint32(0)
 	offset := uint32(0)
 	for _, t := range s.symbols {
-		if t.value == sym.value {
-			return s.fileName, count, offset
+		fmt.Printf("token '%d' --- ", t.symID)
+		if t.symOffset == sym.symOffset {
+			return s.fileName, line, offset
 		}
-		if t.value == "\n" {
-			count++
+		if strings.Contains(t.value, "\n") {
+			line++
 			offset = 0
 		} else {
-			offset++
+			offset += uint32(len(t.value))
 		}
 	}
-	return s.fileName, count, offset
+	return s.fileName, line, offset
 }
 
 //SliceLine return the Line sourrounding the symbol
@@ -100,8 +102,8 @@ func (s *Source) FindNextDelimiter(sym Symbol, delimiter string) uint32 {
 //PrintContext of a message
 func (s *Source) PrintContext(context MessageContext) {
 	left := s.FindDelimiter(context.symOffset, -1, context.scopeLeft)
-	startLine := s.FindDelimiter(context.symOffset, -1, "\n")
-	endLine := s.FindDelimiter(context.symOffset, 1, "\n")
+	startLine := s.FindDelimiter(context.symOffset-1, -1, "\n")
+	endLine := s.FindDelimiter(context.symOffset+1, 1, "\n")
 	right := s.FindDelimiter(context.symOffset, 1, context.scopeRight)
 
 	if right < endLine {
@@ -111,15 +113,24 @@ func (s *Source) PrintContext(context MessageContext) {
 	for _, t := range s.symbols[left:endLine] {
 		fmt.Print(t.Value())
 	}
+	fmt.Println()
 
-	for _, k := range s.symbols[startLine+1 : endLine] {
+	if right == endLine {
+		right = endLine + 1
+	}
+
+	offendedLine := s.symbols[startLine:endLine]
+
+	fmt.Println("Symbols: ", len(offendedLine))
+
+	for _, t := range offendedLine {
 		char := ""
-		if k.symOffset == context.symOffset {
+		if t.symOffset == context.symOffset {
 			char = "^"
-		} else if k.ID() > 2 {
+		} else if t.ID() > 2 {
 			char = "-"
 		}
-		runeCount := utf8.RuneCountInString(k.Value())
+		runeCount := utf8.RuneCountInString(t.Value())
 		for k := 0; k < runeCount; k++ {
 			fmt.Print(char)
 		}

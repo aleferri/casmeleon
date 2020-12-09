@@ -5,7 +5,7 @@ _halt:      ST      A, 1
             LH      X, #0xFF
             ADD     X, #0xFF
             LD      Y, #1
-            ST      A, (X + 0)
+            ST      A, (X, 0)
             
             ; wait ( ) -> void
 _wait:      LD      A, 16

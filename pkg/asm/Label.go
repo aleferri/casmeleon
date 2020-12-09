@@ -8,8 +8,8 @@ type Label struct {
 	address uint32
 }
 
-func MakeLabel(name string, parent *Label) Label {
-	return Label{name, parent, 0}
+func MakeLabel(name string, parent *Label) *Label {
+	return &Label{name, parent, 0}
 }
 
 //Assemble make the pass
@@ -31,4 +31,8 @@ func (d *Label) Address() uint32 {
 
 func (d *Label) Value() int64 {
 	return int64(d.address)
+}
+
+func (d *Label) Name() string {
+	return d.name
 }

@@ -1,6 +1,8 @@
 package asm
 
-import "errors"
+import (
+	"errors"
+)
 
 type DirectiveOrg struct {
 	address uint32
@@ -15,6 +17,10 @@ func (d *DirectiveOrg) Assemble(addr uint32, index int, ctx Context) (uint32, []
 
 func (d *DirectiveOrg) IsAddressInvariant() bool {
 	return false
+}
+
+func MakeOrg(target uint32) *DirectiveOrg {
+	return &DirectiveOrg{target}
 }
 
 type DirectiveAdvance struct {
@@ -33,6 +39,10 @@ func (d *DirectiveAdvance) IsAddressInvariant() bool {
 	return false
 }
 
+func MakeAdvance(target uint32) *DirectiveAdvance {
+	return &DirectiveAdvance{target}
+}
+
 type DirectiveAlias struct {
 	name  string
 	value int64
@@ -46,6 +56,10 @@ func (d *DirectiveAlias) Value() int64 {
 	return d.value
 }
 
+func MakeAlias(name string, value int64) *DirectiveAlias {
+	return &DirectiveAlias{name, value}
+}
+
 type DirectiveDeposit struct {
 	binaryImage []uint8
 }
@@ -56,4 +70,8 @@ func (d *DirectiveDeposit) Assemble(addr uint32, index int, ctx Context) (uint32
 
 func (d *DirectiveDeposit) IsAddressInvariant() bool {
 	return true
+}
+
+func MakeDeposit(values []uint8) *DirectiveDeposit {
+	return &DirectiveDeposit{values}
 }

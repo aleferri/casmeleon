@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/aleferri/casmeleon/pkg/exec"
 	"github.com/aleferri/casmeleon/pkg/parser"
@@ -20,7 +21,9 @@ type Language struct {
 
 //SetOf return the Set of a symbol
 func (l *Language) SetOf(s string) (*Set, bool) {
-	for _, set := range l.sets {
+	lenSets := len(l.sets) - 1
+	for i := range l.sets {
+		set := l.sets[lenSets-i]
 		if set.Contains(s) {
 			return &set, true
 		}
@@ -52,14 +55,32 @@ func (l *Language) MarkAddressUsed() {
 }
 
 func (l *Language) FilterOpcodesByName(name string) FilterWindow {
-	wnd := FilterWindow{[]string{}, []Opcode{}, []bool{}}
+	wnd := FilterWindow{[]string{}, []Opcode{}}
 	for _, op := range l.opcodes {
 		if op.name == name {
 			wnd.filtered = append(wnd.filtered, op)
-			wnd.lenMatches = append(wnd.lenMatches, len(op.format) == 0)
 		}
 	}
 	return wnd
+}
+
+func (lang *Language) ParseUint(value string) (uint64, error) {
+	for _, base := range lang.numberBases {
+		if base.prefix != "" {
+			if !strings.HasPrefix(value, base.prefix) {
+				continue
+			}
+		}
+		if base.suffix != "" {
+			if !strings.HasSuffix(value, base.suffix) {
+				continue
+			}
+		}
+		count := len(value)
+		cut := value[len(base.prefix) : count-len(base.suffix)]
+		return strconv.ParseUint(cut, int(base.n), 64)
+	}
+	return strconv.ParseUint(value, 10, 64)
 }
 
 func MakeLanguage(root parser.CSTNode) (Language, error) {

@@ -32,5 +32,5 @@ func WrapMatchError(e error, left string, right string) error {
 	if ok {
 		return &ParserError{wrapped: me, context: text.MakeMessageContext(me.Found(), left, right)}
 	}
-	return e
+	panic("Unexpected kind of error from the source")
 }

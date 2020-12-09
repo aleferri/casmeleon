@@ -19,10 +19,13 @@
 
 .set UnaryOps {
     OP_ICY;
-    OP_IDT;
+    OP_BSW;
     OP_ASL;
     OP_LSL;
 }
+
+.num 16 "0x" ""
+.num 2 "0b" ""
 
 .inline ALU_OPCODE_IM
 .with ( r : Regs, op : BinaryOps ) -> {
@@ -48,9 +51,9 @@
     .out [ .expr ALU_OPCODE_IM( r, OP_MOV ), imm8 ];
 }
 
-.opcode LD16 {{ r, #imm16 }}
-.with ( r : Regs, imm16 : Ints ) -> {
-    .out [ 0b10000000 + ( r << 4 ), 2, 0b01000100, 2, imm16 >> 8, imm16 & 255 ];
+.opcode LH {{ r, #imm8 }}
+.with ( r : Regs, imm8 : Ints ) -> {
+    .out [ .expr ALU_OPCODE_IM( r, OP_MOV ), imm8, .expr ALU_OPCODE_RU( r, OP_BSW ), 0 ];
 }
 
 .opcode LD {{ r, zp8 }}

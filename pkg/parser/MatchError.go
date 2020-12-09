@@ -29,11 +29,6 @@ func (m *MatchError) Found() text.Symbol {
 	return m.found
 }
 
-//UnexpectedSymbol found
-func UnexpectedSymbol(expected uint32, found text.Symbol, message string) error {
-	return &MatchError{expected: MakeExpectedKind(expected), found: found, message: message, errCode: NOMATCH}
-}
-
 //ExpectedAnyOf following the list of allowed symbols
 func ExpectedAnyOf(wrong text.Symbol, message string, list ...uint32) *MatchError {
 	return &MatchError{expected: MakeExpectedAny(list...), found: wrong, message: message, errCode: NOMATCH}

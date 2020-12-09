@@ -28,7 +28,7 @@ func Require(stream Stream, sym uint32) (text.Symbol, error) {
 	if c {
 		return v, nil
 	}
-	return v, ExpectedSymbol(v, "Unexpected '%s', was expecting %s", sym)
+	return v, ExpectedSymbol(v, "Unexpected '%s', was expecting: %s", sym)
 }
 
 //Expect consume a symbol of type sym or return an error if the symbol is not the accepted symbol type
@@ -58,7 +58,7 @@ func ConsumeAny(stream Stream, syms ...uint32) bool {
 func RequireAny(stream Stream, syms ...uint32) (text.Symbol, error) {
 	v, c := AcceptAny(stream, syms...)
 	if !c {
-		return v, ExpectedAnyOf(v, "Unexpected '%s', was expecting %s", syms...)
+		return v, ExpectedAnyOf(v, "Unexpected '%s', was expecting: %s", syms...)
 	}
 	return v, nil
 }

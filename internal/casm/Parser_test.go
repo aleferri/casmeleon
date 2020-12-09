@@ -69,7 +69,6 @@ func TestParserSource(t *testing.T) {
 
 		id = stream.Peek().ID()
 	}
-	t.Fail()
 
 	if errFound {
 		t.Errorf("Errors have been found")

@@ -17,8 +17,10 @@ type NumberBase struct {
 //PruneToNumBase create a NumberBase from a CSTNode
 func PruneToNumBase(cst parser.CSTNode) (NumberBase, error) {
 	tokens := cst.Symbols()
-	n, err := strconv.ParseUint(tokens[0].Value(), 10, 1)
-	return NumberBase{n: uint32(n), prefix: tokens[1].Value(), suffix: tokens[2].Value()}, err
+	n, err := strconv.ParseUint(tokens[1].Value(), 10, 64)
+	countPrefix := len(tokens[2].Value()) - 1
+	countSuffix := len(tokens[3].Value()) - 1
+	return NumberBase{n: uint32(n), prefix: tokens[2].Value()[1:countPrefix], suffix: tokens[3].Value()[1:countSuffix]}, err
 }
 
 //DIGITS of a number

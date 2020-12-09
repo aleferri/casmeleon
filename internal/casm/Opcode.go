@@ -2,6 +2,7 @@ package casm
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/aleferri/casmeleon/pkg/exec"
 	"github.com/aleferri/casmeleon/pkg/parser"
@@ -43,14 +44,46 @@ func (o Opcode) StringifyFormat(lang *Language) []string {
 }
 
 func (o Opcode) Accept(format []uint32, types []uint32) bool {
-	return false
+	if len(format) != len(o.format) {
+		fmt.Println("Different lengths format ", len(format), len(o.format))
+		return false
+	}
+
+	//Considering the additional hidden .addr parameter
+	if len(types) != len(o.types)-1 {
+		fmt.Println("Different lengths types ", len(types), len(o.types)-1)
+		return false
+	}
+
+	ids := 0
+
+	for i, particle := range o.format {
+		if particle != format[i] {
+			return false
+		}
+
+		if particle == text.Identifier {
+			if o.types[ids] != types[ids] {
+				return false
+			}
+			ids++
+		}
+	}
+
+	return true
 }
 
-func StringifyFormat(format []uint32) []string {
+func StringifyFormat(lang *Language, format []uint32, types []uint32) []string {
 	desc := []string{}
 
+	ids := 0
 	for _, particle := range format {
-		desc = append(desc, idDescriptor[particle])
+		if particle == text.Identifier {
+			desc = append(desc, lang.sets[types[ids]].name)
+			ids++
+		} else {
+			desc = append(desc, idDescriptor[particle])
+		}
 	}
 
 	return desc
@@ -76,17 +109,20 @@ func PruneToOpcode(lang *Language, op parser.CSTNode) (Opcode, parser.CSTNode, e
 	parsedFormat := children[0].Children()
 	argsFormat := []uint32{}
 
+	params := []string{}
+	types := []uint32{}
+
 	if len(parsedFormat) > 0 {
 		for _, f := range parsedFormat[0].Symbols() {
 			argsFormat = append(argsFormat, f.ID())
+			if f.ID() == text.Identifier {
+				tp, ok := argsLUT[f.Value()]
+				if ok {
+					types = append(types, tp)
+					params = append(params, f.Value())
+				}
+			}
 		}
-	}
-
-	params := []string{}
-	types := []uint32{}
-	for k, v := range argsLUT {
-		params = append(params, k)
-		types = append(types, v)
 	}
 
 	params = append(params, ".addr")

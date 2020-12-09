@@ -57,10 +57,20 @@ func TestCasmProcessing(t *testing.T) {
 
 	asmStream := MakeRootStream(program, &asmSource)
 
+	asmProgram := MakeAssemblyProgram()
+	asmSymbolTable := MakeSymbolTable()
+
 	for asmStream.Peek().ID() != text.EOF {
-		asmErr := ParseSourceLine(lang, asmStream)
+		asmErr := ParseSourceLine(lang, asmStream, &asmSymbolTable, &asmProgram)
 		if asmErr != nil {
-			t.Error(asmErr.Error())
+			parseErr, ok := asmErr.(*casm.ParserError)
+			if !ok {
+				fmt.Println(asmErr.Error())
+			} else {
+				parseErr.PrettyPrint(&asmSource)
+			}
+			t.Fail()
+			break
 		}
 	}
 }
