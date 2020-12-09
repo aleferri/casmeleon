@@ -15,8 +15,8 @@ func IsDirective(s string) bool {
 	return s == ".advance" || s == ".org" || s == ".alias" || s == ".db"
 }
 
-func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable, prog *AssemblyProgram, name text.Symbol) error {
-	switch name.Value() {
+func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable, prog *AssemblyProgram, directive text.Symbol) error {
+	switch directive.Value() {
 	case ".advance":
 		{
 			target, err := parser.Require(stream, text.Number)
@@ -51,16 +51,20 @@ func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable
 		}
 	case ".db":
 		{
-			lastToken := name.WithID(text.Comma)
 			rawVals := []text.Symbol{}
-			for lastToken.ID() == text.Comma {
+
+			sym, err := parser.RequireAny(stream, text.Identifier, text.Number, text.QuotedString)
+			rawVals = append(rawVals, sym)
+			if err != nil {
+				return casm.WrapMatchError(err, ".db", "\n")
+			}
+			for stream.Peek().ID() == text.Comma {
 				stream.Next()
-				seq, err := parser.RequireAny(stream, text.Identifier, text.Number, text.QuotedString)
+				sym, err = parser.RequireAny(stream, text.Identifier, text.Number, text.QuotedString)
 				if err != nil {
 					return casm.WrapMatchError(err, ".db", "\n")
 				}
-				rawVals = append(rawVals, seq)
-				lastToken = stream.Peek()
+				rawVals = append(rawVals, sym)
 			}
 			values := []uint8{}
 			for _, p := range rawVals {
@@ -81,10 +85,10 @@ func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable
 	parser.Consume(stream, text.WHITESPACE)
 
 	if stream.Peek().ID() != text.EOL {
-		return fmt.Errorf("Expected End Of Line after the directive '%s', found instead '%s'", name.Value(), stream.Next().Value())
+		return fmt.Errorf("Expected End Of Line after the directive '%s', found instead '%s'", directive.Value(), stream.Next().Value())
 	}
 	stream.Next()
-	fmt.Println("Successfully parsed the directive ", name.Value())
+	fmt.Println("Successfully parsed the directive ", directive.Value())
 	return nil
 }
 
@@ -151,7 +155,8 @@ func ParseSourceLine(lang casm.Language, stream parser.Stream, table *SymbolTabl
 			op, err := win.PickFirst()
 			if err != nil {
 				fmt.Println(types)
-				return errors.New("Invalid opcode " + name.Value())
+				matchErr := parser.ExpectedAnyOf(name, "Expected valid opcode, but %s was found, unrecognized %s", text.Identifier)
+				return casm.WrapMatchError(matchErr, name.Value(), "\n")
 			}
 
 			fmt.Println("Successfully got opcode " + op.Name())

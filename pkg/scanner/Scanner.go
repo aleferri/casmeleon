@@ -99,26 +99,34 @@ func MergeASMLine(line []Token) []Token {
 	var merged *Token = nil
 	match := int32(-1)
 	for i, t := range line {
-		if match != -1 {
-			if t.basicID == 5 {
-				valid = append(valid, *merged, t)
-				match = -1
-				merged = nil
-			} else if match == t.basicID {
-				*merged = merged.Merge(t)
+		if t.basicID == 6 {
+			continue
+		}
+		if t.basicID == 5 {
+			if match != -1 {
 				valid = append(valid, *merged)
-				match = -1
 				merged = nil
+				match = -1
 			}
+			valid = append(valid, t)
 		} else {
-			if t.basicID == 1 || t.basicID == 2 || t.basicID == 3 {
-				merged = &line[i]
-				match = t.basicID
-				if t.basicID == 1 {
-					match = 5
+			if match != -1 {
+				*merged = merged.Merge(t)
+				if match == t.basicID {
+					valid = append(valid, *merged)
+					match = -1
+					merged = nil
 				}
-			} else if len(t.slice) > 0 {
-				valid = append(valid, t)
+			} else {
+				if t.basicID == 1 || t.basicID == 2 || t.basicID == 3 {
+					merged = &line[i]
+					match = t.basicID
+					if t.basicID == 3 {
+						match = 7
+					}
+				} else if len(t.slice) > 0 {
+					valid = append(valid, t)
+				}
 			}
 		}
 	}
@@ -134,11 +142,13 @@ func ClassifyBasicASMTokens(tokens []Token) {
 			if a == '"' {
 				tokens[i].basicID = 2
 			} else if a == '\'' {
-				tokens[i].basicID = 3
-			} else if a == '\n' || a == '\r' {
+				tokens[i].basicID = 1
+			} else if a == '\n' {
 				tokens[i].basicID = 5
 			} else if a == ';' {
-				tokens[i].basicID = 1
+				tokens[i].basicID = 3
+			} else if a == '\r' {
+				tokens[i].basicID = 6
 			}
 		}
 	}

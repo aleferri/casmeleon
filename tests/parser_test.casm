@@ -1,6 +1,6 @@
 
 .set Regs {
-    P;
+    L;
     A;
     X;
     Y;

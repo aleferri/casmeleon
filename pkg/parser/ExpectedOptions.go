@@ -32,7 +32,7 @@ type ExpectedAny struct {
 func (e *ExpectedAny) StringFromMap(defs map[uint32]string) string {
 	buf := ""
 	for _, t := range e.symsID {
-		buf += ", " + defs[t]
+		buf += defs[t] + ", "
 	}
 	return buf
 }
@@ -40,7 +40,7 @@ func (e *ExpectedAny) StringFromMap(defs map[uint32]string) string {
 func (e *ExpectedAny) StringFromArray(defs []string) string {
 	buf := ""
 	for _, t := range e.symsID {
-		buf += ", " + defs[t]
+		buf += defs[t] + ", "
 	}
 	return buf
 }

@@ -100,12 +100,12 @@ func (s *Source) FindNextDelimiter(sym Symbol, delimiter string) uint32 {
 //PrintContext of a message
 func (s *Source) PrintContext(context MessageContext) {
 	left := s.FindDelimiter(context.symOffset, -1, context.scopeLeft)
-	startLine := s.FindDelimiter(context.symOffset-1, -1, "\n")
-	endLine := s.FindDelimiter(context.symOffset+1, 1, "\n")
+	startLine := s.FindDelimiter(context.symOffset, -1, "\n")
+	endLine := s.FindDelimiter(context.symOffset, 1, "\n")
 	right := s.FindDelimiter(context.symOffset, 1, context.scopeRight)
 
-	if right < endLine {
-		right = endLine
+	if left > startLine {
+		left = startLine
 	}
 
 	for _, t := range s.symbols[left:endLine] {
@@ -113,13 +113,11 @@ func (s *Source) PrintContext(context MessageContext) {
 	}
 	fmt.Println()
 
-	if right == endLine {
-		right = endLine + 1
+	if right < endLine {
+		right = endLine
 	}
 
 	offendedLine := s.symbols[startLine:endLine]
-
-	fmt.Println("Symbols: ", len(offendedLine))
 
 	for _, t := range offendedLine {
 		char := ""
@@ -134,7 +132,7 @@ func (s *Source) PrintContext(context MessageContext) {
 		}
 	}
 
-	for _, e := range s.symbols[endLine+1 : right] {
+	for _, e := range s.symbols[endLine:right] {
 		fmt.Print(e.Value())
 	}
 	fmt.Println()
