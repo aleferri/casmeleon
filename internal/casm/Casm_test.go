@@ -100,5 +100,4 @@ func TestCasmProcessing(t *testing.T) {
 			fmt.Println(reflect.TypeOf(exec))
 		}
 	}
-	t.Fail()
 }

@@ -15,6 +15,7 @@ type Language struct {
 	sets        []Set
 	opcodes     []Opcode
 	inlines     []Inline
+	addrUsed    bool
 }
 
 //SetOf return the Set of a symbol
@@ -46,13 +47,27 @@ func (l *Language) InlineCode(name string) (exec.Executable, error) {
 	return nil, errors.New("No inline named " + name + " exists")
 }
 
+func (l *Language) MarkAddressUsed() {
+	l.addrUsed = true
+}
+
+func (l *Language) FilterOpcodesByName(name string) FilterWindow {
+	wnd := FilterWindow{}
+	for _, op := range l.opcodes {
+		if op.name == name {
+			wnd.filtered = append(wnd.filtered, op)
+		}
+	}
+	return wnd
+}
+
 func MakeLanguage(root parser.CSTNode) (Language, error) {
 	labels := Set{"_FormatLabels", 0, func(string) int32 { return 0 }}
 	integers := Set{"Ints", 1, func(a string) int32 {
 		v, _ := strconv.ParseInt(a, 10, 32)
 		return int32(v)
 	}}
-	lang := Language{[]NumberBase{}, []Set{labels, integers}, []Opcode{}, []Inline{}}
+	lang := Language{[]NumberBase{}, []Set{labels, integers}, []Opcode{}, []Inline{}, false}
 	for _, k := range root.Children() {
 		switch k.ID() {
 		case NUMBER_BASE:
@@ -94,6 +109,8 @@ func MakeLanguage(root parser.CSTNode) (Language, error) {
 					return lang, errors.New("In Opcode " + opcode.name + ":\n" + errBody.Error())
 				}
 				lang.opcodes[len(lang.opcodes)-1].runList = *list
+				lang.opcodes[len(lang.opcodes)-1].useAddr = lang.addrUsed
+				lang.addrUsed = false
 			}
 		}
 
@@ -110,7 +127,7 @@ func ExecutableListFromNode(lang *Language, params []string, root parser.CSTNode
 		switch node.ID() {
 		case STMT_BRANCH:
 			{
-				_, err := CompileExpression(lang, params, list, nil, node.Symbols())
+				_, err := CompileExpression(lang, params, list, node.Symbols())
 				if err != nil {
 					return nil, err
 				}
@@ -136,7 +153,7 @@ func ExecutableListFromNode(lang *Language, params []string, root parser.CSTNode
 			}
 		case STMT_RET:
 			{
-				_, err := CompileExpression(lang, params, list, nil, node.Children()[0].Symbols())
+				_, err := CompileExpression(lang, params, list, node.Children()[0].Symbols())
 				if err != nil {
 					return list, err
 				}
@@ -147,7 +164,7 @@ func ExecutableListFromNode(lang *Language, params []string, root parser.CSTNode
 				outList := []exec.Executable{}
 				for _, expr := range node.Children() {
 					execList := []exec.Executable{}
-					_, err := CompileExpression(lang, params, &execList, nil, expr.Symbols())
+					_, err := CompileExpression(lang, params, &execList, expr.Symbols())
 					if err != nil {
 						return list, errors.New("In .out statement:\n" + err.Error())
 					}

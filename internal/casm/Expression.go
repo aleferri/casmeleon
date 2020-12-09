@@ -13,9 +13,9 @@ import (
 func PruneExpressionToExecutionList(lang *Language, params []string, types []uint32, expr parser.CSTNode) ([]exec.Executable, error) {
 	list := []exec.Executable{}
 
-	left, err := CompileTerm(lang, params, &list, nil, expr.Symbols())
+	left, err := CompileTerm(lang, params, &list, expr.Symbols())
 	for len(left) > 0 && err == nil {
-		left, err = CompileTerm(lang, params, &list, nil, left)
+		left, err = CompileTerm(lang, params, &list, left)
 	}
 
 	return list, err
@@ -29,7 +29,8 @@ var Precedence = map[string]int{
 	"!": 4, "~": 4, ".len": 4,
 }
 
-func CompileTerm(lang *Language, params []string, list *[]exec.Executable, precedence *text.Symbol, queued []text.Symbol) ([]text.Symbol, error) {
+//CompileTerm compile a <Term> of the expression: either <Identifier> | <Integer> | <UnaryOp> | <ParensExpr> | <InlineCall>
+func CompileTerm(lang *Language, params []string, list *[]exec.Executable, queued []text.Symbol) ([]text.Symbol, error) {
 	if len(queued) == 0 {
 		return queued, nil
 	}
@@ -62,6 +63,9 @@ func CompileTerm(lang *Language, params []string, list *[]exec.Executable, prece
 			for i, p := range params {
 				if p == q.Value() {
 					*list = append(*list, exec.RLoadOf(uint32(i)))
+					if p == ".addr" {
+						lang.MarkAddressUsed()
+					}
 					return queued[1:], nil
 				}
 			}
@@ -76,7 +80,7 @@ func CompileTerm(lang *Language, params []string, list *[]exec.Executable, prece
 			var err error = nil
 			stack := []exec.Executable{}
 			for q.ID() != text.RoundClose && err == nil {
-				queued, err = CompileExpression(lang, params, &stack, precedence, queued[1:])
+				queued, err = CompileExpression(lang, params, &stack, queued[1:])
 				q = queued[0]
 			}
 			*list = append(*list, exec.BuildStackExpression(stack))
@@ -85,7 +89,7 @@ func CompileTerm(lang *Language, params []string, list *[]exec.Executable, prece
 	case text.OperatorNeg, text.OperatorNot, text.OperatorPlusUnary, text.OperatorMinusUnary:
 		{
 			stack := []exec.Executable{}
-			left, err := CompileTerm(lang, params, &stack, precedence, queued[1:])
+			left, err := CompileTerm(lang, params, &stack, queued[1:])
 
 			var partial exec.Executable = exec.BuildStackExpression(stack)
 			if q.ID() != text.OperatorPlus {
@@ -110,7 +114,7 @@ func CompileTerm(lang *Language, params []string, list *[]exec.Executable, prece
 			queued = queued[2:]
 			var err error = nil
 			for q.ID() == text.Comma && err == nil {
-				queued, err = CompileExpression(lang, params, &stack, precedence, queued[1:])
+				queued, err = CompileExpression(lang, params, &stack, queued[1:])
 				q = queued[0]
 			}
 
@@ -127,6 +131,7 @@ func CompileTerm(lang *Language, params []string, list *[]exec.Executable, prece
 	return queued, nil
 }
 
+//CompileFactor compile the left associativity part of the expression
 func CompileFactor(lang *Language, params []string, list *[]exec.Executable, precedence *text.Symbol, queued []text.Symbol) ([]text.Symbol, error) {
 	operator := queued[0]
 
@@ -137,7 +142,7 @@ func CompileFactor(lang *Language, params []string, list *[]exec.Executable, pre
 		return queued, nil
 	}
 
-	left, err := CompileTerm(lang, params, list, nil, queued[1:])
+	left, err := CompileTerm(lang, params, list, queued[1:])
 	if err != nil {
 		return left, err
 	}
@@ -165,8 +170,9 @@ func CompileFactor(lang *Language, params []string, list *[]exec.Executable, pre
 	return CompileFactor(lang, params, list, nil, left)
 }
 
-func CompileExpression(lang *Language, params []string, list *[]exec.Executable, precedence *text.Symbol, queued []text.Symbol) ([]text.Symbol, error) {
-	left, err := CompileTerm(lang, params, list, precedence, queued)
+//CompileExpression compile the whole expression
+func CompileExpression(lang *Language, params []string, list *[]exec.Executable, queued []text.Symbol) ([]text.Symbol, error) {
+	left, err := CompileTerm(lang, params, list, queued)
 	if err != nil || len(left) == 0 {
 		return left, err
 	}

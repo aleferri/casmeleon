@@ -55,3 +55,7 @@ func (i *Interpreter) Pop() int64 {
 func (i *Interpreter) PushResult(v int64) {
 	i.current.ret.Push(v)
 }
+
+func (i *Interpreter) PopResults() Stack {
+	return i.current.ret
+}

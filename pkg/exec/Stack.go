@@ -5,6 +5,10 @@ type Stack struct {
 	content []int64
 }
 
+func (s *Stack) Content() []int64 {
+	return s.content
+}
+
 //Push new content on top of the stack
 func (s *Stack) Push(i int64) {
 	s.content = append(s.content, i)

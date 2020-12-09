@@ -67,6 +67,36 @@ func Merge(matching map[int32]int32, tokens []Token, merged *Token, last int32) 
 	return valid, merged, last
 }
 
+//MergeASMLine matching tokens
+func MergeASMLine(line []Token) []Token {
+	valid := []Token{}
+	var merged *Token = nil
+	last := int32(-1)
+	for i, t := range line {
+		if last != -1 {
+			*merged = merged.Merge(t)
+			if last == t.basicID || t.basicID == 3 {
+				valid = append(valid, *merged)
+				last = -1
+				merged = nil
+			}
+		} else {
+			if t.basicID == 1 || t.basicID == 2 || t.basicID == 3 {
+				merged = &line[i]
+				last = t.basicID
+				if t.basicID == 1 {
+					last = 5
+				}
+			} else {
+				if len(t.slice) > 0 {
+					valid = append(valid, t)
+				}
+			}
+		}
+	}
+	return valid
+}
+
 //ClassifyMergeableTokens for successive Join
 func ClassifyMergeableTokens(tokens []Token) {
 	for i := range tokens {

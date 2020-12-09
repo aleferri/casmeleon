@@ -15,6 +15,11 @@ type Opcode struct {
 	params  []string          //opcode parameters name
 	types   []uint32          //param types
 	runList []exec.Executable //executable operations
+	useAddr bool
+}
+
+func (o Opcode) Name() string {
+	return o.name
 }
 
 //Param Types
