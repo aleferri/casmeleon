@@ -2,7 +2,6 @@ package text
 
 import (
 	"fmt"
-	"strings"
 	"unicode/utf8"
 )
 
@@ -38,11 +37,10 @@ func (s *Source) FindPosition(sym Symbol) (string, uint32, uint32) {
 	line := uint32(0)
 	offset := uint32(0)
 	for _, t := range s.symbols {
-		fmt.Printf("token '%d' --- ", t.symID)
 		if t.symOffset == sym.symOffset {
 			return s.fileName, line, offset
 		}
-		if strings.Contains(t.value, "\n") {
+		if t.symID == EOL {
 			line++
 			offset = 0
 		} else {

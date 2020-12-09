@@ -89,7 +89,8 @@ func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable
 }
 
 func ParseSourceLine(lang casm.Language, stream parser.Stream, table *SymbolTable, prog *AssemblyProgram) error {
-	parser.Consume(stream, text.EOL)
+	for parser.Consume(stream, text.EOL) {
+	}
 	if stream.Peek().ID() == text.EOF {
 		return nil
 	}
