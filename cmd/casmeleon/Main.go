@@ -3,124 +3,32 @@ package main
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/aleferri/casmeleon/internal/langdef"
-	"github.com/aleferri/casmeleon/internal/lexing"
-	"github.com/aleferri/casmeleon/internal/parsing"
-	"github.com/aleferri/casmeleon/internal/text"
+	"github.com/aleferri/casmeleon/internal/casm"
 	"github.com/aleferri/casmeleon/internal/ui"
+	"github.com/aleferri/casmeleon/pkg/asm"
+	"github.com/aleferri/casmeleon/pkg/text"
 )
 
-//ASMDefaultOptions return the default options for assembly files
-func ASMDefaultOptions(lang *langdef.LangDef) lexing.TokenMatchingOptions {
-	const separators = "@#$,:{}()[]'\"\t "
-	const operators = "+ - * / % ^ & | ~ > < ! <= >= == && || != << >> ->"
-	const lineComment = ";"
-	return lexing.NewMatchingOptions(operators, lang.RemoveSpecialPurposeChars(separators), operators+lineComment, lineComment)
-}
-
-//Settings are the global Casmeleon settings
-type Settings struct {
-	lang          *langdef.LangDef
-	userInterface ui.UI
-	passLimit     int
-	debugMode     bool //print the output to video in extended form
-}
-
-//NewSettings build a new set of settings
-func NewSettings(lang *langdef.LangDef, passLimit int, userInterface ui.UI) Settings {
-	return Settings{lang, userInterface, passLimit, false}
-}
-
-func (p *Settings) SetDebugMode(b bool) {
-	p.debugMode = b
-}
-
-var sourceLibrary = parsing.NewSourceLibrary()
-
-func GetSyncOfFile(sourceName string) func([]*text.SourceLine) {
-	return func(lines []*text.SourceLine) {
-		sourceLibrary.AddSource(sourceName, true, lines)
-	}
-}
-
-func ParseASM(fileName string, settings Settings) ([]uint, bool) {
-	buffer := parsing.NewTokenBufferFromFile(fileName, ASMDefaultOptions(settings.lang))
-	buffer.SyncLines(GetSyncOfFile(fileName))
-	parent := NewASMSourceRoot(fileName, settings.lang)
-	child := ASMSourceLeaf{parent, []OpcodeInfo{}, []ASMLabel{}}
-	parent.AddChild(&child)
-	pState := NewParserState(settings.userInterface, buffer)
-	pState.SetCustomIdentification(func(t text.Token) (text.Token, ui.SourceCodeError) { return settings.lang.IdentifyNumber(t) })
-	builder := NewASMReader(pState, &child)
-	fullName, _ := filepath.Abs(fileName)
-	includeList := make([]ASMSourceInclude, 0)
-	noErr := true
-	noMoreFiles := false
-	for noErr && !noMoreFiles {
-		noErr = builder.Parse(settings.lang, &includeList)
-		noMoreFiles = true
-		if len(includeList) > 0 {
-			toParse := includeList[0]
-			builder = toParse.SetupBuilder(builder, settings)
-			includeList = includeList[1:]
-			noMoreFiles = false
-		}
-	}
-	builder.ReportUnresolvedSymbols()
-	if !noErr || settings.userInterface.GetErrorCount() > 0 {
-		return nil, false
-	}
-	return AssembleSource(fullName, settings, builder.pass, parent)
-}
-
-func AssembleSource(fullName string, settings Settings, firstPass PassResult, parent ASMSource) ([]uint, bool) {
-	oldPass := firstPass
-	suppressLoops := uint(1)
-	suppressErrors := uint(1 << 2)
-	for i := 0; i < settings.passLimit; i++ {
-		pass := PassResult{oldPass.labels, []uint{}, []int{}}
-		diff, err := pass.makePass(&oldPass, parent, suppressLoops|suppressErrors)
-		if err != nil {
-			err.Report(settings.userInterface, sourceLibrary.GetSource(fullName)[err.GetLine()-1])
-			return nil, false
-		}
-		if diff == 0 {
-			if settings.debugMode {
-				pass.PrintResult(parent)
-			}
-			return pass.output, true
-		}
-		oldPass = pass
-		suppressLoops = 0
-		if i == 1 {
-			suppressErrors = 0
-		}
-	}
-	settings.userInterface.ReportError("Unstable output", true)
-	return nil, false
-}
-
-func dumpOutput(originalFileName string, settings Settings, output []uint) {
+func dumpOutput(originalFileName string, ui ui.UI, output []uint8) {
 	lastDot := strings.LastIndex(originalFileName, ".")
 	fileNoExtension := originalFileName[0:lastDot]
 	out, err := os.Create(fileNoExtension + ".bin")
 	if err != nil {
-		settings.userInterface.ReportError("Output to file failed: "+err.Error(), true)
+		ui.ReportError("Output to file failed: "+err.Error(), true)
 		return
 	}
 	writer := bufio.NewWriter(out)
 	for _, b := range output {
-		val := uint8(b)
-		writer.WriteByte(val)
+		writer.WriteByte(b)
 	}
 	writer.Flush()
 	err = out.Close()
 	if err != nil {
-		settings.userInterface.ReportError(err.Error(), true)
+		ui.ReportError(err.Error(), true)
 	}
 }
 
@@ -129,8 +37,6 @@ func main() {
 	flag.StringVar(&langFileName, "lang", ".", "-lang=langfile")
 	var debugMode bool
 	flag.BoolVar(&debugMode, "debug", false, "-debug=true|false")
-	var userPass int
-	flag.IntVar(&userPass, "pass", 3, "-pass=x")
 	flag.Parse()
 	tUI := ui.NewConsole(false, false)
 	if strings.EqualFold(langFileName, ".") {
@@ -142,20 +48,83 @@ func main() {
 		tUI.ReportError("failed open of file "+langFileName+", "+err.Error(), true)
 		return
 	}
-	lang := langdef.NewLangDef(langFileName, bufio.NewReader(langFile), tUI)
+	source := bufio.NewReader(langFile)
+	repo := text.BuildSource(langFileName)
+
+	stream := casm.BuildStream(source, &repo)
+
+	root, err := casm.ParseCasm(stream, repo)
+
+	if err != nil {
+		parseErr, ok := err.(*casm.ParserError)
+		if !ok {
+			fmt.Println("Unexpected Error")
+		} else {
+			parseErr.PrettyPrint(&repo)
+		}
+		return
+	}
+
+	lang, semErr := casm.MakeLanguage(root)
+	if semErr != nil {
+		fmt.Println("Error " + semErr.Error())
+		return
+	}
+
 	langFile.Close()
 	if tUI.GetErrorCount() > 0 {
 		return
 	}
-	lang.SortOpcodes()
-	settings := NewSettings(lang, userPass, tUI)
-	settings.SetDebugMode(debugMode)
+
 	for _, f := range flag.Args() {
 		if !strings.HasPrefix(f, "-") {
-			output, success := ParseASM(f, settings)
-			if success {
-				dumpOutput(f, settings, output)
+			programFileName := "../../tests/example_test.s"
+
+			var programfile, programErr = os.Open(programFileName)
+			if programErr != nil {
+				wnd, _ := os.Getwd()
+				fmt.Printf("Error during opening of file %s from %s\n", langFileName, wnd)
+				return
 			}
+
+			program := bufio.NewReader(programfile)
+
+			asmSource := text.BuildSource("example_test.s")
+
+			asmStream := MakeRootStream(program, &asmSource)
+
+			asmProgram := MakeAssemblyProgram()
+			asmSymbolTable := MakeSymbolTable()
+
+			for asmStream.Peek().ID() != text.EOF {
+				asmErr := ParseSourceLine(lang, asmStream, &asmSymbolTable, &asmProgram)
+				if asmErr != nil {
+					parseErr, ok := asmErr.(*casm.ParserError)
+					if !ok {
+						fmt.Println(asmErr.Error())
+					} else {
+						parseErr.PrettyPrint(&asmSource)
+					}
+					return
+				}
+			}
+
+			if len(asmSymbolTable.watchList) > 0 {
+				fmt.Printf("Missing %d symbols:\n", len(asmSymbolTable.watchList))
+				for _, miss := range asmSymbolTable.watchList {
+					fmt.Printf("Missing symbol %s\n", miss.Value())
+				}
+				return
+			}
+
+			ctx := asm.MakeSourceContext()
+			binaryImage, compilingErr := asm.AssembleSource(asmProgram.list, ctx)
+			if compilingErr != nil {
+				fmt.Println(compilingErr.Error())
+				return
+			}
+
+			dumpOutput(f, tUI, binaryImage)
 		}
 	}
 }
