@@ -13,7 +13,7 @@ func MakeLabel(name string, parent *Label) *Label {
 }
 
 //Assemble make the pass
-func (l *Label) Assemble(addr uint32, ctx Context) (uint32, []uint8, error) {
+func (l *Label) Assemble(addr uint32, index int, ctx Context) (uint32, []uint8, error) {
 	if addr != l.address {
 		ctx.NotifyChange(l)
 	}
@@ -35,4 +35,8 @@ func (d *Label) Value() int64 {
 
 func (d *Label) Name() string {
 	return d.name
+}
+
+func (d *Label) IsDynamic() bool {
+	return true
 }

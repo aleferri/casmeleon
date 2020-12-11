@@ -91,6 +91,11 @@ func (s Symbol) WithID(symID uint32) Symbol {
 	return s
 }
 
+func (s Symbol) WithText(text string) Symbol {
+	s.value = text
+	return s
+}
+
 //ID is the identifier of the Symbol
 func (s Symbol) ID() uint32 {
 	return s.symID

@@ -2,7 +2,6 @@ package casm
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/aleferri/casmeleon/pkg/exec"
 	"github.com/aleferri/casmeleon/pkg/parser"
@@ -19,12 +18,20 @@ type Opcode struct {
 	useAddr bool
 }
 
+func (o Opcode) UseAddress() bool {
+	return o.useAddr
+}
+
 func (o Opcode) Name() string {
 	return o.name
 }
 
 func (o Opcode) Format() []uint32 {
 	return o.format
+}
+
+func (o Opcode) RunList() []exec.Executable {
+	return o.runList
 }
 
 func (o Opcode) StringifyFormat(lang *Language) []string {
@@ -45,13 +52,11 @@ func (o Opcode) StringifyFormat(lang *Language) []string {
 
 func (o Opcode) Accept(format []uint32, types []uint32) bool {
 	if len(format) != len(o.format) {
-		fmt.Println("Different lengths format ", len(format), len(o.format))
 		return false
 	}
 
 	//Considering the additional hidden .addr parameter
 	if len(types) != len(o.types)-1 {
-		fmt.Println("Different lengths types ", len(types), len(o.types)-1)
 		return false
 	}
 

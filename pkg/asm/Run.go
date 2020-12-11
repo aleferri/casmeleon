@@ -1,5 +1,10 @@
 package asm
 
+import (
+	"errors"
+	"fmt"
+)
+
 type BinaryImage struct {
 	content []uint8
 }
@@ -33,9 +38,12 @@ func AssembleSource(list []Compilable, ctx Context) ([]uint8, error) {
 		result = append(result, BinaryImage{img})
 	}
 
-	retry := ctx.RetryList()
+	fmt.Println("First pass done, checking things that must rerun")
 
-	for len(retry) != 0 {
+	retry := ctx.RetryList()
+	passes := 0
+
+	for len(retry) != 0 && passes < 3 {
 		ctx.ClearAll()
 
 		for _, r := range retry {
@@ -49,11 +57,18 @@ func AssembleSource(list []Compilable, ctx Context) ([]uint8, error) {
 				}
 			}
 		}
+
+		retry = ctx.RetryList()
+		passes++
 	}
 
 	img = []uint8{}
 	for _, bin := range result {
 		img = append(img, bin.content...)
 	}
-	return img, nil
+
+	if passes < 3 {
+		return img, nil
+	}
+	return img, errors.New("Infinite loop was stopped")
 }

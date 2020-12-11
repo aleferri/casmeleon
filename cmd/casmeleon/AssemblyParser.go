@@ -60,11 +60,15 @@ func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable
 			}
 			for stream.Peek().ID() == text.Comma {
 				stream.Next()
+				toSum := ""
+				if stream.Peek().ID() == text.OperatorMinus {
+					toSum = stream.Next().Value()
+				}
 				sym, err = parser.RequireAny(stream, text.Identifier, text.Number, text.QuotedString)
 				if err != nil {
 					return casm.WrapMatchError(err, ".db", "\n")
 				}
-				rawVals = append(rawVals, sym)
+				rawVals = append(rawVals, sym.WithText(toSum+sym.Value()))
 			}
 			values := []uint8{}
 			for _, p := range rawVals {
@@ -92,6 +96,70 @@ func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable
 	return nil
 }
 
+func ParseLabel(lang casm.Language, stream parser.Stream, table *SymbolTable, prog *AssemblyProgram, labelToken text.Symbol) error {
+	labelName := labelToken.Value()
+	fqln := labelName
+	isLocalLabel := labelName[0] == '.'
+	if isLocalLabel {
+		if table.lastGlobalLabel == nil {
+			matchErr := parser.ExpectedAnyOf(labelToken, "Unexpected a local label %s: expected global label '%s'", text.Identifier)
+			parseErr := casm.WrapMatchError(matchErr, "\n", "\n")
+			return parseErr
+		}
+		fqln = table.lastGlobalLabel.Name() + labelName
+	}
+	label := asm.MakeLabel(fqln, nil)
+	if !isLocalLabel {
+		table.lastGlobalLabel = label
+	}
+	table.Add(label)
+	table.UnWatch(label.Name())
+	prog.Add(label)
+	fmt.Println("Found label: ", label.Name())
+
+	return ParseSourceLine(lang, stream, table, prog)
+}
+
+func TokensToFormat(lang casm.Language, symTable *SymbolTable, tokens []text.Symbol) (ArgumentFormat, error) {
+	args := MakeFormat()
+	numSet, _ := lang.SetByName("Ints")
+	for _, tok := range tokens {
+		if tok.ID() == text.Number {
+			args.types = append(args.types, numSet.ID())
+			args.format = append(args.format, text.Identifier)
+			numVal, err := lang.ParseInt(tok.Value())
+			if err != nil {
+				matchErr := parser.ExpectedSymbol(tok, "Unexpected '%s' found, expecting a valid %s", text.Number)
+				return args, casm.WrapMatchError(matchErr, "\n", "\n")
+			}
+			args.parameters = append(args.parameters, asm.MakeConstant(numVal))
+		} else if tok.ID() == text.Identifier {
+			setName, found := lang.SetOf(tok.Value())
+			if found && setName.ID() > 1 {
+				args.types = append(args.types, setName.ID())
+				setValue, _ := setName.Value(tok.Value())
+				args.parameters = append(args.parameters, asm.MakeConstant(int64(setValue)))
+			} else {
+				name := tok.Value()
+				if name[0] == '.' {
+					tok = tok.WithText(symTable.lastGlobalLabel.Name() + name)
+				}
+				lookup, found := symTable.Search(tok.Value())
+				if !found {
+					lookup = MakePatchSymbol(tok.Value(), symTable)
+					symTable.Watch(tok)
+				}
+				args.parameters = append(args.parameters, lookup)
+				args.types = append(args.types, numSet.ID())
+			}
+			args.format = append(args.format, text.Identifier)
+		} else {
+			args.format = append(args.format, tok.ID())
+		}
+	}
+	return args, nil
+}
+
 func ParseSourceLine(lang casm.Language, stream parser.Stream, table *SymbolTable, prog *AssemblyProgram) error {
 	for parser.Consume(stream, text.EOL) {
 	}
@@ -105,63 +173,45 @@ func ParseSourceLine(lang casm.Language, stream parser.Stream, table *SymbolTabl
 
 	if IsDirective(name.Value()) {
 		return ParseDirective(lang, stream, table, prog, name)
+	} else if stream.Peek().ID() == text.Colon {
+		stream.Next()
+		return ParseLabel(lang, stream, table, prog, name)
 	} else {
-		if stream.Peek().ID() == text.Colon {
-			stream.Next()
-			fmt.Println("Found label: ", name.Value())
-			return ParseSourceLine(lang, stream, table, prog)
-		} else {
-			lastToken := stream.Next()
+		lastToken := stream.Next()
 
-			args := []text.Symbol{}
-			tokensFormat := []text.Symbol{}
+		rawArgs := []text.Symbol{}
+		tokensFormat := []text.Symbol{}
 
-			for lastToken.ID() != text.EOL {
-				tokensFormat = append(tokensFormat, lastToken)
-				args = append(args, lastToken)
+		for lastToken.ID() != text.EOL {
+			tokensFormat = append(tokensFormat, lastToken)
+			rawArgs = append(rawArgs, lastToken)
+			lastToken = stream.Next()
+			if lastToken.ID() == text.OperatorMinus {
 				lastToken = stream.Next()
+				lastToken = lastToken.WithText("-" + lastToken.Value())
 			}
-
-			win := lang.FilterOpcodesByName(name.Value())
-			fmt.Println("Candidates number for ", name.Value(), ":", len(win.Candidates()))
-			list := win.Candidates()
-			for _, opc := range list {
-				fmt.Println("Available format: ", opc.StringifyFormat(&lang))
-			}
-			types := []uint32{}
-			format := []uint32{}
-			numSet, _ := lang.SetByName("Ints")
-			for _, tok := range tokensFormat {
-				if tok.ID() == text.Number {
-					types = append(types, numSet.ID())
-					format = append(format, text.Identifier)
-				} else if tok.ID() == text.Identifier {
-					setName, found := lang.SetOf(tok.Value())
-					if found {
-						types = append(types, setName.ID())
-					} else {
-						fmt.Printf("Probable Label found, require patchup later")
-						table.Add(asm.MakeLabel(tok.Value(), nil))
-						types = append(types, numSet.ID())
-					}
-					format = append(format, text.Identifier)
-				} else {
-					format = append(format, tok.ID())
-				}
-			}
-			fmt.Println("Provided Format: ", casm.StringifyFormat(&lang, format, types))
-			win = win.FilterByFormat(format, types)
-
-			op, err := win.PickFirst()
-			if err != nil {
-				fmt.Println(types)
-				matchErr := parser.ExpectedAnyOf(name, "Expected valid opcode, but %s was found, unrecognized %s", text.Identifier)
-				return casm.WrapMatchError(matchErr, name.Value(), "\n")
-			}
-
-			fmt.Println("Successfully got opcode " + op.Name())
-
-			return nil
 		}
+
+		win := lang.FilterOpcodesByName(name.Value())
+
+		args, literalErrs := TokensToFormat(lang, table, tokensFormat)
+
+		if literalErrs != nil {
+			return literalErrs
+		}
+
+		win = win.FilterByFormat(args.format, args.types)
+
+		op, err := win.PickFirst()
+		if err != nil {
+			matchErr := parser.ExpectedAnyOf(name, "Expected valid opcode, but %s was found, unrecognized %s", text.Identifier)
+			return casm.WrapMatchError(matchErr, name.Value(), "\n")
+		}
+
+		fmt.Println("Recognized opcode " + op.Name())
+
+		prog.Add(MakeOpcodeInstance(op, args, table))
+
+		return nil
 	}
 }

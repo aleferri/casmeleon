@@ -83,6 +83,16 @@ func (lang *Language) ParseUint(value string) (uint64, error) {
 	return strconv.ParseUint(value, 10, 64)
 }
 
+func (lang *Language) ParseInt(value string) (int64, error) {
+	if value[0] == '-' {
+		fmt.Println("Negative number found")
+		v, e := lang.ParseUint(value[1:])
+		return -int64(v), e
+	}
+	v, e := lang.ParseUint(value)
+	return int64(v), e
+}
+
 func MakeLanguage(root parser.CSTNode) (Language, error) {
 	labels := Set{"_FormatLabels", 0, func(string) int32 { return 0 }}
 	integers := Set{"Ints", 1, func(a string) int32 {

@@ -1,16 +1,26 @@
 package asm
 
 type SourceContext struct {
-	guards map[Symbol]RetryQueue
+	guards map[string]RetryQueue
 }
 
-func (ctx *SourceContext) GuardSymbol(sym Symbol, x int, addr uint32, c Compilable) {
-	retry, ok := ctx.guards[sym]
+func MakeSourceContext() *SourceContext {
+	return &SourceContext{map[string]RetryQueue{}}
+}
+
+func (ctx *SourceContext) EnsureExists(name string) RetryQueue {
+	retry, ok := ctx.guards[name]
 	if !ok {
 		retry = MakeRetryQueue()
+		ctx.guards[name] = retry
 	}
+	return retry
+}
+
+func (ctx *SourceContext) GuardSymbol(name string, x int, addr uint32, c Compilable) {
+	retry := ctx.EnsureExists(name)
 	retry.Append(x, addr, c)
-	ctx.guards[sym] = retry
+	ctx.guards[name] = retry
 }
 
 func (ctx *SourceContext) ClearAll() {
@@ -22,9 +32,9 @@ func (ctx *SourceContext) ClearAll() {
 }
 
 func (ctx *SourceContext) NotifyChange(sym Symbol) {
-	retry := ctx.guards[sym]
+	retry := ctx.EnsureExists(sym.Name())
 	retry.changed = true
-	ctx.guards[sym] = retry
+	ctx.guards[sym.Name()] = retry
 }
 
 func (ctx *SourceContext) RetryList() []RetryQueue {

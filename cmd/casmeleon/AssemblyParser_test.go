@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/aleferri/casmeleon/internal/casm"
+	"github.com/aleferri/casmeleon/pkg/asm"
 	"github.com/aleferri/casmeleon/pkg/text"
 )
 
@@ -73,4 +74,18 @@ func TestCasmProcessing(t *testing.T) {
 			break
 		}
 	}
+
+	if len(asmSymbolTable.watchList) > 0 {
+		t.Errorf("Missing %d symbols:\n", len(asmSymbolTable.watchList))
+		for _, miss := range asmSymbolTable.watchList {
+			t.Errorf("Missing symbol %s\n", miss.Value())
+		}
+	}
+
+	ctx := asm.MakeSourceContext()
+	binaryImage, compilingErr := asm.AssembleSource(asmProgram.list, ctx)
+	if compilingErr != nil {
+		t.Error(compilingErr.Error())
+	}
+	fmt.Println(binaryImage)
 }
