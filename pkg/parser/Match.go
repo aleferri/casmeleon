@@ -22,6 +22,15 @@ func Consume(stream Stream, sym uint32) bool {
 	return c
 }
 
+//ConsumeAll symbols of type sym
+func ConsumeAll(stream Stream, sym uint32) int {
+	i := 0
+	for Consume(stream, sym) {
+		i++
+	}
+	return i
+}
+
 //Require accept a symbol of type sym or return an error if the symbol is not the accepted symbol type
 func Require(stream Stream, sym uint32) (text.Symbol, error) {
 	v, c := Accept(stream, sym)

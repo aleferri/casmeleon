@@ -2,14 +2,17 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aleferri/casmeleon/internal/casm"
 	"github.com/aleferri/casmeleon/internal/ui"
 	"github.com/aleferri/casmeleon/pkg/asm"
+	"github.com/aleferri/casmeleon/pkg/parser"
 	"github.com/aleferri/casmeleon/pkg/text"
 )
 
@@ -30,6 +33,101 @@ func dumpOutput(originalFileName string, ui ui.UI, output []uint8) {
 	if err != nil {
 		ui.ReportError(err.Error(), true)
 	}
+}
+
+func ParseIncludedASMFile(lang casm.Language, program *AssemblyProgram, symTable *SymbolTable, sourceFile string) error {
+	var programfile, programErr = os.Open(sourceFile)
+	if programErr != nil {
+		wnd, _ := os.Getwd()
+		return fmt.Errorf("Error during opening of file %s from %s\n", sourceFile, wnd)
+	}
+
+	code := text.BuildSource(sourceFile)
+	programCode := bufio.NewReader(programfile)
+
+	stream := MakeRootStream(programCode, &code)
+
+	parser.ConsumeAll(stream, text.EOL)
+
+	for stream.Peek().ID() != text.EOF {
+		if stream.Peek().Value() == ".include" {
+			stream.Next()
+			toInclude, noFile := parser.Require(stream, text.QuotedString)
+			if noFile != nil {
+				return noFile
+			}
+			includedFileName := toInclude.Value()
+			includedErr := ParseIncludedASMFile(lang, program, symTable, filepath.Dir(sourceFile)+"/"+includedFileName[1:len(includedFileName)-1])
+			if includedErr != nil {
+				return includedErr
+			}
+		}
+		parseErr := ParseSourceLine(lang, stream, symTable, program)
+		if parseErr != nil {
+			parseErr, ok := parseErr.(*casm.ParserError)
+			if !ok {
+				fmt.Println(parseErr.Error())
+			} else {
+				parseErr.PrettyPrint(&code)
+			}
+			return errors.New("Error during compilation")
+		}
+		parser.ConsumeAll(stream, text.EOL)
+	}
+	programfile.Close()
+	return nil
+}
+
+func ParseASMFile(lang casm.Language, sourceFile string) (*AssemblyProgram, error) {
+	var programfile, programErr = os.Open(sourceFile)
+	if programErr != nil {
+		wnd, _ := os.Getwd()
+		return nil, fmt.Errorf("Error during opening of file %s from %s\n", sourceFile, wnd)
+	}
+
+	code := text.BuildSource(sourceFile)
+	programCode := bufio.NewReader(programfile)
+
+	stream := MakeRootStream(programCode, &code)
+
+	program := MakeAssemblyProgram()
+	symTable := MakeSymbolTable()
+	parser.ConsumeAll(stream, text.EOL)
+
+	for stream.Peek().ID() != text.EOF {
+		if stream.Peek().Value() == ".include" {
+			stream.Next()
+			toInclude, noFile := parser.Require(stream, text.QuotedString)
+			if noFile != nil {
+				return nil, noFile
+			}
+			includedFileName := toInclude.Value()
+			includedErr := ParseIncludedASMFile(lang, &program, &symTable, filepath.Dir(sourceFile)+"/"+includedFileName[1:len(includedFileName)-1])
+			if includedErr != nil {
+				return nil, includedErr
+			}
+		}
+		parseErr := ParseSourceLine(lang, stream, &symTable, &program)
+		if parseErr != nil {
+			parseErr, ok := parseErr.(*casm.ParserError)
+			if !ok {
+				fmt.Println(parseErr.Error())
+			} else {
+				parseErr.PrettyPrint(&code)
+			}
+			return nil, errors.New("Error during compilation")
+		}
+		parser.ConsumeAll(stream, text.EOL)
+	}
+
+	if len(symTable.watchList) > 0 {
+		for _, miss := range symTable.watchList {
+			fmt.Printf("Missing symbol %s\n", miss.Value())
+		}
+		return nil, fmt.Errorf("Missing %d symbols:\n", len(symTable.watchList))
+	}
+	programfile.Close()
+	return &program, nil
 }
 
 func main() {
@@ -78,47 +176,17 @@ func main() {
 
 	for _, f := range flag.Args() {
 		if !strings.HasPrefix(f, "-") {
-			programFileName := "../../tests/example_test.s"
 
-			var programfile, programErr = os.Open(programFileName)
-			if programErr != nil {
-				wnd, _ := os.Getwd()
-				fmt.Printf("Error during opening of file %s from %s\n", langFileName, wnd)
-				return
-			}
+			program, errAsm := ParseASMFile(lang, f)
 
-			program := bufio.NewReader(programfile)
-
-			asmSource := text.BuildSource("example_test.s")
-
-			asmStream := MakeRootStream(program, &asmSource)
-
-			asmProgram := MakeAssemblyProgram()
-			asmSymbolTable := MakeSymbolTable()
-
-			for asmStream.Peek().ID() != text.EOF {
-				asmErr := ParseSourceLine(lang, asmStream, &asmSymbolTable, &asmProgram)
-				if asmErr != nil {
-					parseErr, ok := asmErr.(*casm.ParserError)
-					if !ok {
-						fmt.Println(asmErr.Error())
-					} else {
-						parseErr.PrettyPrint(&asmSource)
-					}
-					return
-				}
-			}
-
-			if len(asmSymbolTable.watchList) > 0 {
-				fmt.Printf("Missing %d symbols:\n", len(asmSymbolTable.watchList))
-				for _, miss := range asmSymbolTable.watchList {
-					fmt.Printf("Missing symbol %s\n", miss.Value())
-				}
-				return
+			if errAsm != nil {
+				fmt.Println(errAsm.Error())
+				break
 			}
 
 			ctx := asm.MakeSourceContext()
-			binaryImage, compilingErr := asm.AssembleSource(asmProgram.list, ctx)
+			binaryImage, compilingErr := asm.AssembleSource(program.list, ctx)
+
 			if compilingErr != nil {
 				fmt.Println(compilingErr.Error())
 				return

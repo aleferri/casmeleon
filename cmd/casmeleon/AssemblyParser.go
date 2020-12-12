@@ -92,7 +92,6 @@ func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable
 		return fmt.Errorf("Expected End Of Line after the directive '%s', found instead '%s'", directive.Value(), stream.Next().Value())
 	}
 	stream.Next()
-	fmt.Println("Successfully parsed the directive ", directive.Value())
 	return nil
 }
 
@@ -115,7 +114,6 @@ func ParseLabel(lang casm.Language, stream parser.Stream, table *SymbolTable, pr
 	table.Add(label)
 	table.UnWatch(label.Name())
 	prog.Add(label)
-	fmt.Println("Found label: ", label.Name())
 
 	return ParseSourceLine(lang, stream, table, prog)
 }
@@ -161,8 +159,7 @@ func TokensToFormat(lang casm.Language, symTable *SymbolTable, tokens []text.Sym
 }
 
 func ParseSourceLine(lang casm.Language, stream parser.Stream, table *SymbolTable, prog *AssemblyProgram) error {
-	for parser.Consume(stream, text.EOL) {
-	}
+	parser.ConsumeAll(stream, text.EOL)
 	if stream.Peek().ID() == text.EOF {
 		return nil
 	}
@@ -207,8 +204,6 @@ func ParseSourceLine(lang casm.Language, stream parser.Stream, table *SymbolTabl
 			matchErr := parser.ExpectedAnyOf(name, "Expected valid opcode, but %s was found, unrecognized %s", text.Identifier)
 			return casm.WrapMatchError(matchErr, name.Value(), "\n")
 		}
-
-		fmt.Println("Recognized opcode " + op.Name())
 
 		prog.Add(MakeOpcodeInstance(op, args, table))
 

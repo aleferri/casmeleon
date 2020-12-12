@@ -49,7 +49,7 @@ var identifyMap = map[string]uint32{
 var idDescriptor = []string{
 	"No Token", "End of Line", "End Of File", "Whitespace", "(", ")", "[", "]", "{", "}", "N/D", "N/D", ",", ":", ";",
 	"@", "#", "->", "/*", "*/", "//", "Quoted String", "Quoted Char", "+", "-", "*", "/", "%", ">>", "<<", "&", "&&",
-	"|", "||", "^", "!", "~", "<", "==", "<=", ">=", ">", "!=", ".if Keyword", ".else Keyword", ".out Keyword", ".set Keyword",
+	"|", "||", "^", "!", "~", "<", "==", "<=", ">=", ">", "!=", ".if Keyword", ".else Keyword", ".out Keyword", ".outr Keyword", ".set Keyword",
 	".num Keyword", ".inline Keyword", ".opcode Keyword", ".with Keyword", ".expr Keyword", ".warning Keyword", ".error Keyword",
 	".return Keyword", "Number", "Identifier", "Out of bounds",
 }

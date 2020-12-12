@@ -39,20 +39,20 @@ var scanFollowMap = scanner.FromMap(map[rune]scanner.Follow{
 
 var identifyMap = map[string]uint32{
 	".if": text.KeywordIF, ".else": text.KeywordELSE, ".opcode": text.KeywordOpcode, ".with": text.KeywordWith, ".num": text.KeywordNum,
-	".set": text.KeywordSet, ".out": text.KeywordOut, ".expr": text.KeywordExpr, ".error": text.KeywordError, ".warning": text.KeywordWarning,
-	".inline": text.KeywordInline, "&": text.OperatorAnd, "&&": text.OperatorLAnd, "|": text.OperatorOr, "||": text.OperatorLOr, "+": text.OperatorPlus,
-	"-": text.OperatorMinus, "*": text.OperatorMul, "/": text.OperatorDiv, "%": text.OperatorMod, "^": text.OperatorXor, "!": text.OperatorNot,
-	"~": text.OperatorNeg, "<": text.OperatorLess, "<=": text.OperatorLessEqual, "==": text.OperatorEqual, ">=": text.OperatorGreaterEqual,
-	">": text.OperatorGreater, "!=": text.OperatorNotEqual, "<<": text.OperatorLeftShift, ">>": text.OperatorRightShift, "->": text.SymbolArrow,
-	"#": text.SymbolHash, "@": text.SymbolHash, "{{": text.DoubleCurlyOpen, "}}": text.DoubleCurlyClose, ".return": text.KeywordReturn,
-	"{": text.CurlyOpen, "}": text.CurlyClose, "(": text.RoundOpen, ")": text.RoundClose, "[": text.SquareOpen, "]": text.SquareClose,
-	";": text.Semicolon, ":": text.Colon, ",": text.Comma,
+	".set": text.KeywordSet, ".out": text.KeywordOut, ".outr": text.KeywordOutR, ".expr": text.KeywordExpr, ".error": text.KeywordError,
+	".warning": text.KeywordWarning, ".inline": text.KeywordInline, "&": text.OperatorAnd, "&&": text.OperatorLAnd, "|": text.OperatorOr,
+	"||": text.OperatorLOr, "+": text.OperatorPlus, "-": text.OperatorMinus, "*": text.OperatorMul, "/": text.OperatorDiv, "%": text.OperatorMod,
+	"^": text.OperatorXor, "!": text.OperatorNot, "~": text.OperatorNeg, "<": text.OperatorLess, "<=": text.OperatorLessEqual,
+	"==": text.OperatorEqual, ">=": text.OperatorGreaterEqual, ">": text.OperatorGreater, "!=": text.OperatorNotEqual,
+	"<<": text.OperatorLeftShift, ">>": text.OperatorRightShift, "->": text.SymbolArrow, "#": text.SymbolHash, "@": text.SymbolHash,
+	"{{": text.DoubleCurlyOpen, "}}": text.DoubleCurlyClose, ".return": text.KeywordReturn, "{": text.CurlyOpen, "}": text.CurlyClose,
+	"(": text.RoundOpen, ")": text.RoundClose, "[": text.SquareOpen, "]": text.SquareClose, ";": text.Semicolon, ":": text.Colon, ",": text.Comma,
 }
 
 var idDescriptor = []string{
 	"No Token", "End of Line", "End Of File", "Whitespace", "(", ")", "[", "]", "{", "}", "{{", "}}", ",", ":", ";",
 	"@", "#", "->", "/*", "*/", "//", "Quoted String", "Quoted Char", "Unary +", "+", "Unary -", "-", "*", "/", "%", ">>", "<<", "&", "&&",
-	"|", "||", "^", "!", "~", "<", "==", "<=", ">=", ">", "!=", ".if keyword", ".else keyword", ".out keyword", ".set keyword",
+	"|", "||", "^", "!", "~", "<", "==", "<=", ">=", ">", "!=", ".if keyword", ".else keyword", ".out keyword", ".outr keyword", ".set keyword",
 	".num keyword", ".inline keyword", ".opcode keyword", ".with keyword", ".expr keyword", ".warning keyword", ".error keyword",
 	".return keyword", "number", "identifier", "text label", "Errore di fuori indice",
 }

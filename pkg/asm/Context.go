@@ -4,6 +4,6 @@ package asm
 type Context interface {
 	GuardSymbol(name string, x int, addr uint32, c Compilable)
 	ClearAll()
-	NotifyChange(sym Symbol)
+	Refresh(sym Symbol)
 	RetryList() []RetryQueue
 }

@@ -83,9 +83,8 @@ func TestCasmProcessing(t *testing.T) {
 	}
 
 	ctx := asm.MakeSourceContext()
-	binaryImage, compilingErr := asm.AssembleSource(asmProgram.list, ctx)
+	_, compilingErr := asm.AssembleSource(asmProgram.list, ctx)
 	if compilingErr != nil {
 		t.Error(compilingErr.Error())
 	}
-	fmt.Println(binaryImage)
 }

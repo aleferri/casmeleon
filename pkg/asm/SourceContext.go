@@ -31,7 +31,7 @@ func (ctx *SourceContext) ClearAll() {
 	}
 }
 
-func (ctx *SourceContext) NotifyChange(sym Symbol) {
+func (ctx *SourceContext) Refresh(sym Symbol) {
 	retry := ctx.EnsureExists(sym.Name())
 	retry.changed = true
 	ctx.guards[sym.Name()] = retry

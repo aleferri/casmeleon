@@ -43,8 +43,10 @@ func AssembleSource(list []Compilable, ctx Context) ([]uint8, error) {
 	retry := ctx.RetryList()
 	passes := 0
 
-	for len(retry) != 0 && passes < 3 {
+	for len(retry) != 0 && passes < 2 {
 		ctx.ClearAll()
+
+		fmt.Println("Ouput oscillation, pending ", len(retry), "opcode rebuild")
 
 		for _, r := range retry {
 			fix, err := r.ReAssemble(ctx, &result)
@@ -53,7 +55,8 @@ func AssembleSource(list []Compilable, ctx Context) ([]uint8, error) {
 			}
 			if fix != 0 {
 				for _, v := range fixLater {
-					addr, img, err = list[v.index].Assemble(addr, v.index, ctx)
+					_, img, err = list[v.index].Assemble(v.addr, v.index, ctx)
+					result[v.index] = BinaryImage{img}
 				}
 			}
 		}
@@ -62,12 +65,14 @@ func AssembleSource(list []Compilable, ctx Context) ([]uint8, error) {
 		passes++
 	}
 
+	fmt.Println("Ouput stabilized, done")
+
 	img = []uint8{}
 	for _, bin := range result {
 		img = append(img, bin.content...)
 	}
 
-	if passes < 3 {
+	if passes < 2 {
 		return img, nil
 	}
 	return img, errors.New("Infinite loop was stopped")

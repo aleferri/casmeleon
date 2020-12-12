@@ -16,7 +16,7 @@ func MakeInterpreter(frame Frame, runList []Executable) Interpreter {
 func (i *Interpreter) Run() error {
 	i.complete = false
 	var err error = nil
-	for len(i.runList) != 0 && err != nil && i.complete != true {
+	for len(i.runList) > 0 && err == nil && !i.complete {
 		q := i.runList[0]
 		i.runList = i.runList[1:]
 		err = q.Execute(i)
@@ -28,6 +28,7 @@ func (i *Interpreter) Run() error {
 func (i *Interpreter) CallFrame(f Frame, list []Executable) error {
 	last := i.current
 	queue := i.runList
+	backComplete := i.complete
 
 	i.current = f
 	i.runList = list
@@ -36,6 +37,7 @@ func (i *Interpreter) CallFrame(f Frame, list []Executable) error {
 
 	last.eval.Push(i.current.ret.Pop())
 
+	i.complete = backComplete
 	i.current = last
 	i.runList = queue
 	return err
@@ -56,6 +58,6 @@ func (i *Interpreter) PushResult(v int64) {
 	i.current.ret.Push(v)
 }
 
-func (i *Interpreter) PopResults() Stack {
+func (i *Interpreter) PopResults() *Stack {
 	return i.current.ret
 }

@@ -182,6 +182,8 @@ func ParseStatement(stream parser.Stream) (parser.CSTNode, error) {
 		return ParseWarning(stream)
 	case text.KeywordOut:
 		return ParseOut(stream)
+	case text.KeywordOutR:
+		return ParseOut(stream)
 	case text.KeywordReturn:
 		return ParseReturn(stream)
 	}
@@ -236,12 +238,17 @@ func ParseBranch(stream parser.Stream) (parser.CSTNode, error) {
 
 //ParseOut parse an out
 func ParseOut(stream parser.Stream) (parser.CSTNode, error) {
-	parser.Expect(stream, text.KeywordOut)
+	outK := stream.Next()
 	exprs, err := parser.AcceptPatternWithTest(stream, text.SquareOpen, text.SquareClose, text.Comma, ParseExpression)
 
 	parser.Expect(stream, text.Semicolon)
 
-	outNode := parser.BuildBranch([]text.Symbol{}, STMT_OUT)
+	id := uint32(STMT_OUT)
+	if outK.ID() == text.KeywordOutR {
+		id = STMT_OUTR
+	}
+
+	outNode := parser.BuildBranch([]text.Symbol{}, id)
 	for _, e := range exprs {
 		outNode.InsertChild(e, true)
 	}

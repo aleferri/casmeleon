@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"unicode"
 
 	"github.com/aleferri/casmeleon/pkg/parser"
@@ -67,11 +66,6 @@ func (s *AssemblyStream) Buffer() {
 
 		scanner.ClassifyBasicASMTokens(temps)
 		scanned := scanner.MergeASMLine(temps)
-
-		lastOne := len(scanned) - 1
-		if scanned[lastOne].String() != "\n" {
-			fmt.Println("Failure to do parsing")
-		}
 
 		for _, t := range scanned {
 			sym := IdentifySymbol(t.Runes(), s.repo.FileIndex(), s.repo.Count())

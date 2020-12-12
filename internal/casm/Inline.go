@@ -40,12 +40,20 @@ type InlineCall struct {
 }
 
 func (c *InlineCall) Execute(i *exec.Interpreter) error {
-	args := []int64{}
+	inverse := []int64{}
 	for range c.call.params {
-		args = append(args, i.Pop())
+		inverse = append(inverse, i.Pop())
+	}
+	args := []int64{}
+	for k := len(inverse) - 1; k >= 0; k-- {
+		args = append(args, inverse[k])
 	}
 
 	frame := exec.FrameOf(args)
 
 	return i.CallFrame(frame, c.call.runList)
+}
+
+func (c *InlineCall) String() string {
+	return "invoke"
 }

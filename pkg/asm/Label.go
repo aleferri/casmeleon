@@ -15,7 +15,7 @@ func MakeLabel(name string, parent *Label) *Label {
 //Assemble make the pass
 func (l *Label) Assemble(addr uint32, index int, ctx Context) (uint32, []uint8, error) {
 	if addr != l.address {
-		ctx.NotifyChange(l)
+		ctx.Refresh(l)
 	}
 	l.address = addr
 	return addr, emptyLabelOutput, nil

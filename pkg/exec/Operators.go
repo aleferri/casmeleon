@@ -36,7 +36,8 @@ func EvalMul(i *Interpreter) {
 }
 
 func EvalDiv(i *Interpreter) {
-	i.Push(i.Pop() / i.Pop())
+	a := i.Pop()
+	i.Push(i.Pop() / a)
 }
 
 func EvalRem(i *Interpreter) {

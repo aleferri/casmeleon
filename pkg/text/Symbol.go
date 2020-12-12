@@ -60,6 +60,7 @@ const (
 	KeywordIF
 	KeywordELSE
 	KeywordOut
+	KeywordOutR
 	KeywordSet
 	KeywordNum
 	KeywordInline

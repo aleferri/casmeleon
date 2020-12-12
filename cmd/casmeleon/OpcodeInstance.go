@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/aleferri/casmeleon/internal/casm"
 	"github.com/aleferri/casmeleon/pkg/asm"
 	"github.com/aleferri/casmeleon/pkg/exec"
@@ -10,6 +8,7 @@ import (
 
 type OpcodeInstance struct {
 	addrInvariant bool
+	name          string
 	parameters    []asm.Symbol
 	runList       []exec.Executable
 	symTable      *SymbolTable
@@ -17,22 +16,22 @@ type OpcodeInstance struct {
 
 func MakeOpcodeInstance(opcode casm.Opcode, format ArgumentFormat, symTable *SymbolTable) *OpcodeInstance {
 	inst := OpcodeInstance{
-		addrInvariant: opcode.UseAddress(), parameters: format.parameters, runList: opcode.RunList(), symTable: symTable,
+		addrInvariant: opcode.UseAddress(), name: opcode.Name(), parameters: format.parameters, runList: opcode.RunList(), symTable: symTable,
 	}
 	return &inst
 }
 
 func (c *OpcodeInstance) Assemble(addr uint32, index int, ctx asm.Context) (uint32, []uint8, error) {
-
 	instances := []int64{}
 	for _, a := range c.parameters {
 		instances = append(instances, a.Value())
 		if a.IsDynamic() {
 			//Mark dynamic symbols only
-			fmt.Println("Guarding to", a.Name())
 			ctx.GuardSymbol(a.Name(), index, addr, c)
 		}
 	}
+
+	instances = append(instances, int64(addr))
 
 	interp := exec.MakeInterpreter(exec.FrameOf(instances), c.runList)
 	err := interp.Run()

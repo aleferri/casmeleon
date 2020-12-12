@@ -72,6 +72,7 @@ func CompileTerm(lang *Language, params []string, list *[]exec.Executable, queue
 			t, f := lang.SetOf(q.Value())
 			if f {
 				*list = append(*list, exec.ILoadOf(int64(t.valueOf(q.Value()))))
+				return queued, nil
 			}
 			return queued, errors.New("Parameter " + q.Value() + " not found")
 		}
@@ -88,21 +89,18 @@ func CompileTerm(lang *Language, params []string, list *[]exec.Executable, queue
 		}
 	case text.OperatorNeg, text.OperatorNot, text.OperatorPlusUnary, text.OperatorMinusUnary:
 		{
-			stack := []exec.Executable{}
-			left, err := CompileTerm(lang, params, &stack, queued[1:])
+			left, err := CompileTerm(lang, params, list, queued[1:])
 
-			var partial exec.Executable = exec.BuildStackExpression(stack)
 			if q.ID() != text.OperatorPlus {
 				switch q.ID() {
 				case text.OperatorNeg:
-					partial = exec.BuildComplement(partial)
+					*list = append(*list, exec.BuildComplement())
 				case text.OperatorMinus:
-					partial = exec.BuildNegate(partial)
+					*list = append(*list, exec.BuildNegate())
 				case text.OperatorNot:
-					partial = exec.BuildNot(partial)
+					*list = append(*list, exec.BuildNot())
 				}
 			}
-			*list = append(*list, partial)
 			return left, err
 		}
 	case text.KeywordExpr:
@@ -133,6 +131,9 @@ func CompileTerm(lang *Language, params []string, list *[]exec.Executable, queue
 
 //CompileFactor compile the left associativity part of the expression
 func CompileFactor(lang *Language, params []string, list *[]exec.Executable, precedence *text.Symbol, queued []text.Symbol) ([]text.Symbol, error) {
+	if len(queued) == 0 {
+		return queued, nil
+	}
 	operator := queued[0]
 
 	opVal := operator.Value()

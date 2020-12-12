@@ -23,6 +23,6 @@ func (s *Stack) Pop() int64 {
 }
 
 //EmptyStack create an empty stack
-func EmptyStack() Stack {
-	return Stack{content: []int64{}}
+func EmptyStack() *Stack {
+	return &Stack{content: []int64{}}
 }

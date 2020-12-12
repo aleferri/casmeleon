@@ -159,18 +159,19 @@ func ExecutableListFromNode(lang *Language, params []string, root parser.CSTNode
 		switch node.ID() {
 		case STMT_BRANCH:
 			{
-				_, err := CompileExpression(lang, params, list, node.Symbols())
+				children := node.Children()
+				_, err := CompileExpression(lang, params, list, children[0].Symbols())
 				if err != nil {
 					return nil, err
 				}
-				children := node.Children()
-				taken, bodyErr := ExecutableListFromNode(lang, params, children[0], nil)
+
+				taken, bodyErr := ExecutableListFromNode(lang, params, children[1], nil)
 				if bodyErr != nil {
 					return nil, bodyErr
 				}
 
-				if len(children) > 1 {
-					notTaken, elseErr := ExecutableListFromNode(lang, params, children[1], nil)
+				if len(children) > 2 {
+					notTaken, elseErr := ExecutableListFromNode(lang, params, children[2], nil)
 					if elseErr != nil {
 						return nil, elseErr
 					}
@@ -204,6 +205,19 @@ func ExecutableListFromNode(lang *Language, params []string, root parser.CSTNode
 				}
 				*list = append(*list, exec.MakeOutResult(outList))
 			}
+		case STMT_OUTR:
+			{
+				outList := []exec.Executable{}
+				for _, expr := range node.Children() {
+					execList := []exec.Executable{}
+					_, err := CompileExpression(lang, params, &execList, expr.Symbols())
+					if err != nil {
+						return list, errors.New("In .out statement:\n" + err.Error())
+					}
+					outList = append(outList, exec.BuildStackExpression(execList))
+				}
+				*list = append(*list, exec.MakeOutResultReverse(outList))
+			}
 		case STMT_WARNING:
 			{
 				*list = append(*list, exec.EmitWarningOf(0, "error, will implement later"))
@@ -236,4 +250,5 @@ const (
 	BIN_OPERATOR = 17
 	URY_OPERATOR = 18
 	ROOT_NODE    = 19
+	STMT_OUTR    = 20
 )

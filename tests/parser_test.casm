@@ -183,7 +183,7 @@
     .if zp8 > 255 {
         .error addr8, "ZeroPage is limited to the first 256 locations of memory";
     }
-    .out [ .expr ALU_OPCODE_ZP( r, OP_ADD ), zp8 ];
+    .outr [ .expr ALU_OPCODE_ZP( r, OP_ADD ), zp8 ];
 }
 
 .opcode SUB {{ r, zp8 }}
@@ -228,17 +228,14 @@
 
 .opcode CALL {{ addr16 }}
 .with (addr16 : Ints) -> {
-    // 16° word is the "Link" register, so:
-    // ST P, 16
-    // LD P, (P, 1)
-    // .WORD ADDR16
-    .out [ 0b11001000, 16, 0b10000000, 1, addr16 >> 8, addr16 & 255 ];
+    // LH L, high(addr16)
+    // BSW L
+    // JMP L, low(addr16)
+    .out [ .expr ALU_OPCODE_IM( 0, OP_MOV ), addr16 >> 8, .expr ALU_OPCODE_RU( 0, OP_BSW ), 0, 0b01100000, addr16 & 255 ];
 }
 
 .opcode RET {{ }}
 .with () -> {
-    // 16° word is the "Link" register, so:
-    // LD Y, 16
-    // JMP P, ( Y + 1 )
-    .out [ 0b10001010, 16, 0b01001010, 1 ];
+    // JMP ( L + 1 )
+    .out [ 0b01100000, 1 ];
 }
