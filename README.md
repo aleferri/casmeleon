@@ -7,38 +7,35 @@ that mimic the syntax of other assembler for different cpu architecture, a sort 
 
 What it has:
 
-  * flexible opcode syntax
-  * variable length opcode binary output
-  * labels (global and locals)
-  * enums to define registers and similar
-  * flexible number format
-  * include other file in assembly part
-  * variable list arguments (as byte list) in opcodes
+  * Flexible opcode syntax with checked arguments and pattern matching
+  * Variable length opcode binary output, with a special instruction to output bytes in reverse order
+  * Labels (global and locals)
+  * Sets to define registers and similar
+  * Straightforward number format
+  * Inlude directive to inject other file in a specified position assembly
+  * DB directive with support of quoted strings and variable length lists
+  * DW directive with support of quoted strings (UTF-16 16 bit sized only) and variable lenght lists
+  * Common functions (called inlines) that allow one to factor the instruction decoding logic in a small number of places
+  * Advance directive to pad the generated file with minimal effort
+  * Org directive to change the address without generating padding bytes
 
-What it lacks (lot of things):
+What it lacks:
 
   * macro in user program
-  * variable list arguments for opcodes
-  * expression in program
-  * few other things
 
 The assembler require a least 2 files: a definition of the language in .casm file and a source file in any extension as long as it is text
 
 casm definition language bnf
 
-     <definition> ::= { <numeric format> | <opcode definition> | <enum definition> }
+     <definition> ::= { <numeric format definition> | <opcode definition> | <inline definition> | <set definition> }
 
-     <numeric format> ::= '.number' <number base> <position> <single quoted string> '\n'
+     <numeric format> ::= '.num' <number> <quoted stirng> <quoted string> ';'
 
-     <number base> ::= '.hex' | '.bin' | '.oct' | '.dec'
+     <set definition> ::= '.set' <identifier> '{' <identifier list> '}';
 
-     <position> ::= 'prefix' | 'suffix'
+     <identifier list> ::= <identifier> [';' <identifier list>]
 
-     <enum definition> ::= '.enum' <identifier> '{' <identifier list> '}';
-
-     <identifier list> ::= <identifier> [, <identifier list>]
-
-     <opcode definition> ::= '.opcode' <identifier> <syntax definition> '->' <block>
+     <opcode definition> ::= '.opcode' <identifier> '{{' <syntax definition> '}}' '->' <block>
 
      <syntax definition> ::= ε | <arg format>
 
@@ -50,21 +47,19 @@ casm definition language bnf
 
      <statement list> ::= <statement>; [<statement list>]
 
-     <statement> ::= <deposit> <expression> | <if statement> | <error statement> | <loop statement>  
+     <statement> ::= <return expression> | <if statement> | <error statement> | <warning statement> | <out statement>  
 
-     <deposit> ::= '.db' | '.dw' | '.dd'
+     <expression> ::= <operand> | <operator> <expression> | <expression> <operator> <expression>
 
-     <expression> ::= <operand> | <operator> <expression> | <expression> <operator> <expression> | '(' <expression> ')'
+     <operand> ::= <number> | <identifier> | '.expr' <identifier> '(' <expression> ')' | '(' <expression> ')'
 
-     <operand> ::= <number> | <identifier>
-
-     <operator> ::= '+' | '-' | '/' | '%' | '*' | '>>' | '<<' | '&' | '|' | '^' | '~' | '&&' | '||' | '!=' | '!' | '==' | '>' | '<' | '<=' | '>=' | .in
+     <operator> ::= '+' | '-' | '/' | '%' | '*' | '>>' | '<<' | '&' | '|' | '^' | '~' | '&&' | '||' | '!=' | '!' | '==' | '>' | '<' | '<=' | '>='
 
      <if statement> ::= 'if' <expression> <block> [ 'else' <block> ]
 
-     <error statement> ::= '.error' <source> <double quoted string>
-
-     <loop statement> ::= 'for' <identifier> 'until' <expression> <deposit> <expression>
+     <error statement> ::= '.error' <source> ',' <double quoted string>
+     
+     <warning statement> ::= '.warning' <source> ',' <double quoted string>
 
      <source> ::= <identifier>
 
@@ -76,7 +71,7 @@ casm definition language bnf
 
      <symbol> ::= <separator> | <operator>
 
-     <separator> ::= '(' | ')' | '[' | ']' | '{' | '}' | ',' | '@' | '$' | ';' | '#'
+     <separator> ::= '(' | ')' | '[' | ']' | '{' | '}' | ',' | '@' | ';' | '#' | ':' 
 
      <number> ::= <binary number> | <decimal number> | <octal number> | <hexadecimal number>
 
@@ -88,10 +83,6 @@ casm definition language bnf
 
      <decimal digit> ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
-     <octal number> ::= '0o' { <octal digit> }
-
-     <octal digit> ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7'
-
      <hexadecimal number> ::= '0x' { <hexadecimal digit> }
 
      <hexadecimal digit> ::= <decimal digit> | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
@@ -100,44 +91,21 @@ casm definition language bnf
 
 char is anything that is not a separator an operator or a digit
 
-Comment marker is '//'. Comment are removed before parsing
+Comment marker is '//' or /* */. Comment are removed before parsing
 
 Operators precedences are not included in the grammar to keep it short  
 This is their precedence:  
 
   * 0: "||", "&&"
-  * 1: "!=", "==", ">=", "<=", "<", ">", ".in"
+  * 1: "!=", "==", ">=", "<=", "<", ">"
   * 2: "<<", ">>", "+", "-", "|"
   * 3: "*", "/", "%", "^", "&"
   * 4: "!", "~"
  
-Some example:  
+For examples watch docs/grammar.md
 
-    //org implementation example  
-    .opcode org addr -> {  
-        for i until addr db 0; //i start from this_address and loop until the desired address padding with 0  
-    }  
-
-    //add immediate  
-    .opcode add #imm8 -> {  
-        if imm8 > 255 {  
-            .error imm8 "immediate must be less than 256";  
-        }  
-        .db 0x10;  
-        .db imm8;  
-    }  
-    //space after symbols are stripped, so "add # 26" is the same as "add #26"  
-
-    //this syntax can also be used for meta-opcode, example:  
-    .opcode db imm8 -> {  
-        .db imm8;  
-    } //db now deposit values in the program  
-
-    //number format  
-    .number .hex suffix 'h' //in the user program all number ending with h are hexadecimal  
-
-Program file is a list of labels and opcodes, labels are local or global  
-Local labels are normal labels with '.' prefix so .done is a local label  
+Program file is a list of labels, opcodes and directives, labels are local or global  
+Local labels are normal labels with '.' prefix. For example '.done' is a local label  
 Local labels can be called outside their scope, example:  
 
      _f1:  
@@ -154,11 +122,21 @@ Include file example:
 
     .include "fileName.s"  
 
+Advance to address example:
+
+    .advance 5000 ; advance to the address 5000
+
+Store bytes or words:
+
+    .db "My list for the supermarket: even emojii are supported", 1, 20, 0x0A, 0x0D
+    .dw "String of UTF-16 runes cut to 16 bit", 10, 20, 5000, 24678
+
 Comment marker for user program is semicolon ';'
 
 Flags and usage
 
-casmeleon.exe -lang=lang-name -debug=true/false file  
-debug flag is optional  
+casmeleon.exe -lang=lang-name file  
+debug flag was provided in the v1, but was temporanely removed in v2, pending further reorganization of debug experience  
 output file name is file - extension + .bin  
-debug cause the individual opcode to be print to video in the form address: opcode-name expanded args -> list of bytes
+
+"Program oscillation" message mean that there was some symbol that wasn't known when first referenced (e.g. future labels) or that the subsequent reassemble list caused some of the symbol to change their address. In comparison of the last version there are internally guards that trigger a partial re-evaluation of the input after a change of address for a referenced symbol. Performance are strictly better, because the precedent version iterated the whole source multiple time until the outut was stable. In fixed encoding instruction set it is guaranteed to complete in 2 passes (1° pass whole source, 2° pass triggered revaluations), more complex instructions set encodings can require a few more passes. 
