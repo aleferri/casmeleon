@@ -17,6 +17,7 @@ type Language struct {
 	opcodes     []Opcode
 	inlines     []Inline
 	addrUsed    bool
+	endianess   bool // 0 big endian, 1 little endian
 }
 
 //SetOf return the Set of a symbol
@@ -93,13 +94,17 @@ func (lang *Language) ParseInt(value string) (int64, error) {
 	return int64(v), e
 }
 
+func (lang *Language) Endianess() bool {
+	return lang.endianess
+}
+
 func MakeLanguage(root parser.CSTNode) (Language, error) {
 	labels := Set{"_FormatLabels", 0, func(string) int32 { return 0 }}
 	integers := Set{"Ints", 1, func(a string) int32 {
 		v, _ := strconv.ParseInt(a, 10, 32)
 		return int32(v)
 	}}
-	lang := Language{[]NumberBase{}, []Set{labels, integers}, []Opcode{}, []Inline{}, false}
+	lang := Language{[]NumberBase{}, []Set{labels, integers}, []Opcode{}, []Inline{}, false, true}
 	for _, k := range root.Children() {
 		switch k.ID() {
 		case NUMBER_BASE:

@@ -63,6 +63,7 @@ const (
 	KeywordOutR
 	KeywordSet
 	KeywordNum
+	KeywordAtom
 	KeywordInline
 	KeywordOpcode
 	KeywordWith

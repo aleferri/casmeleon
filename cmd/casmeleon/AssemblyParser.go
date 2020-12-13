@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,7 +13,7 @@ import (
 )
 
 func IsDirective(s string) bool {
-	return s == ".advance" || s == ".org" || s == ".alias" || s == ".db"
+	return s == ".advance" || s == ".org" || s == ".alias" || s == ".db" || s == ".dw"
 }
 
 func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable, prog *AssemblyProgram, directive text.Symbol) error {
@@ -79,6 +80,60 @@ func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable
 					val, _ := lang.ParseUint(p.Value())
 					values = append(values, uint8(val))
 				} else if p.ID() == text.Identifier {
+					values = append(values, 0)
+					fmt.Println("Unsupported deposit of identifiers, using 0 as a value, proper support will be implemented later")
+				}
+			}
+			prog.Add(asm.MakeDeposit(values))
+		}
+	case ".dw":
+		{
+			rawVals := []text.Symbol{}
+
+			sym, err := parser.RequireAny(stream, text.Identifier, text.Number, text.QuotedString)
+			rawVals = append(rawVals, sym)
+			if err != nil {
+				return casm.WrapMatchError(err, ".dw", "\n")
+			}
+			for stream.Peek().ID() == text.Comma {
+				stream.Next()
+				toSum := ""
+				if stream.Peek().ID() == text.OperatorMinus {
+					toSum = stream.Next().Value()
+				}
+				sym, err = parser.RequireAny(stream, text.Identifier, text.Number, text.QuotedString)
+				if err != nil {
+					return casm.WrapMatchError(err, ".dw", "\n")
+				}
+				rawVals = append(rawVals, sym.WithText(toSum+sym.Value()))
+			}
+			values := []uint8{}
+			for _, p := range rawVals {
+				if p.ID() == text.QuotedString {
+					str := p.Value()
+					trimmed := strings.TrimSuffix(strings.TrimPrefix(str, "\""), "\"")
+					for _, c := range bytes.Runes([]byte(trimmed)) {
+						if lang.Endianess() {
+							values = append(values, uint8(c&255))
+							values = append(values, uint8(c>>8))
+						} else {
+							values = append(values, uint8(c>>8))
+							values = append(values, uint8(c&255))
+						}
+
+					}
+				} else if p.ID() == text.Number {
+					val, _ := lang.ParseUint(p.Value())
+					if lang.Endianess() {
+						values = append(values, uint8(val&255))
+						values = append(values, uint8(val>>8))
+					} else {
+						values = append(values, uint8(val>>8))
+						values = append(values, uint8(val&255))
+					}
+
+				} else if p.ID() == text.Identifier {
+					values = append(values, 0)
 					values = append(values, 0)
 					fmt.Println("Unsupported deposit of identifiers, using 0 as a value, proper support will be implemented later")
 				}
@@ -205,7 +260,7 @@ func ParseSourceLine(lang casm.Language, stream parser.Stream, table *SymbolTabl
 			return casm.WrapMatchError(matchErr, name.Value(), "\n")
 		}
 
-		prog.Add(MakeOpcodeInstance(op, args, table))
+		prog.Add(MakeOpcodeInstance(op, args, table, 1))
 
 		return nil
 	}

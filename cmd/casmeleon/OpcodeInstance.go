@@ -12,11 +12,12 @@ type OpcodeInstance struct {
 	parameters    []asm.Symbol
 	runList       []exec.Executable
 	symTable      *SymbolTable
+	atom          uint32
 }
 
-func MakeOpcodeInstance(opcode casm.Opcode, format ArgumentFormat, symTable *SymbolTable) *OpcodeInstance {
+func MakeOpcodeInstance(opcode casm.Opcode, format ArgumentFormat, symTable *SymbolTable, atom uint32) *OpcodeInstance {
 	inst := OpcodeInstance{
-		addrInvariant: opcode.UseAddress(), name: opcode.Name(), parameters: format.parameters, runList: opcode.RunList(), symTable: symTable,
+		addrInvariant: opcode.UseAddress(), name: opcode.Name(), parameters: format.parameters, runList: opcode.RunList(), symTable: symTable, atom: atom,
 	}
 	return &inst
 }
@@ -44,7 +45,7 @@ func (c *OpcodeInstance) Assemble(addr uint32, index int, ctx asm.Context) (uint
 	for _, v := range outs.Content() {
 		bin = append(bin, uint8(v))
 	}
-	return addr + uint32(len(bin)), bin, nil
+	return addr + uint32(len(bin))/c.atom, bin, nil
 }
 
 func (c *OpcodeInstance) IsAddressInvariant() bool {
