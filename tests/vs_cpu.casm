@@ -3,18 +3,15 @@
 //for the user program
 
 //number format definition
-.number .hex suffix 'h'
-.number .bin suffix 'b'
-.number .oct suffix 'o'
+.num 16 '0h' '';
+.num 2 '0b' '';
+.num 8 '0o' '';
 
-.enum output {
+.set Ports {
     port_0,
     port_1,
     port_2,
-    port_3
-}
-
-.enum output {
+    port_3,
     port_4,
     port_5,
     port_6,
@@ -22,60 +19,42 @@
 }
 
 //opcodes definition
-.opcode add adr -> {
+.opcode add {{ adr }}
+.with ( adr : Ints ) -> {
+    if adr < 0 || adr > 63 {
+        .error adr, "address is not between 0 and 63";
+    }
+    .out [ adr ];
+}
+
+.opcode and {{ adr }} 
+.with ( adr : Ints ) -> {
+    if adr < 0 || adr > 63 {
+        .error adr, "address is not between 0 and 63";
+    }
+    .out [ 1 << 6 + adr ];
+}
+
+.opcode jmp {{ adr }} 
+.with ( adr : Ints ) -> {
+    if adr < 0 || adr > 63 {
+        .error adr, "address is not between 0 and 63";
+    }
+    .out [ 2 << 6 + adr ];
+}
+
+.opcode sta {{ adr }} 
+.with ( adr : Ints ) -> {
+    if adr < 0 || adr > 63 {
+        .error adr, "address is not between 0 and 63";
+    }
+    .out [ 3 << 6 + adr ];
+}
+
+.opcode sta {{ port, adr }} 
+.with ( adr : Ints, port : Ports ) -> {
     if adr < 0 || adr > 63 {
         .error adr "address is not between 0 and 63";
     }
-    .db adr;
-}
-
-.opcode and adr -> {
-    if adr < 0 || adr > 63 {
-        .error adr "address is not between 0 and 63";
-    }
-    .db 1 << 6 + adr;
-}
-
-.opcode jmp adr -> {
-    if adr < 0 || adr > 63 {
-        .error adr "address is not between 0 and 63";
-    }
-    .db 2 << 6 + adr;
-}
-
-.opcode sta adr -> {
-    if adr < 0 || adr > 63 {
-        .error adr "address is not between 0 and 63";
-    }
-    .db 3 << 6 + adr;
-}
-
-.opcode sta port, adr -> {
-    if adr < 0 || adr > 63 {
-        .error adr "address is not between 0 and 63";
-    }
-    .db adr;
-    .db 3 << 6 + port;
-}
-
-//meta-opcodes definition
-
-//deposit byte list
-.opcode db ...bytes -> {
-    for i until (this_address + .len ...bytes) .db ...bytes .get (i - this_address);
-}
-
-//dw -> deposit word
-.opcode dw value -> {
-    .dw value;
-}
-
-//rb -> reserve byte (no value)
-.opcode rb -> {
-    .db 0;
-}
-
-//rw -> reserve word (no value)
-.opcode rw -> {
-    .dw 0;
+    .out [ adr, 3 << 6 + port ];
 }

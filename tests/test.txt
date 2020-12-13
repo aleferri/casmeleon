@@ -12,7 +12,7 @@ test:
 .wait:
     jmp .wait
     
-.r: rb
-.n: db 10
-str: db "Hello, world!", 0Ah, 0Dh, 0h ; equal to "Hello, world!\n\r\0"
-zero: db 0
+.r: .db 0
+.n: .db 10
+str: .db "Hello, world!", 0Ah, 0Dh, 0h ; equal to "Hello, world!\n\r\0"
+zero: .db 0
