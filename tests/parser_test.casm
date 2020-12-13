@@ -39,7 +39,7 @@
 
 .inline ALU_OPCODE_RU
 .with ( r : Regs, op : UnaryOps ) -> {
-    .return ( 0b10 << 6 ) + ( r << 4 ) + ( ob1 << 3 ) + op;
+    .return ( 0b10 << 6 ) + ( r << 4 ) + ( 0b1 << 3 ) + op;
 }
 
 .opcode LD {{ r, #imm8 }}
