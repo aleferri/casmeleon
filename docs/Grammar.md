@@ -65,7 +65,7 @@ Let's stop digressing further and let's dive inside the wonderful worlds of inli
     // the specified inline. It is purely academical of course: no one would dare to invent something so bizantine    
     .inline SIB_BYTE
     .with ( base : Register, index : Register, scale : Ints ) -> {  
-        return (scale << 6) + ( index << 3 ) + base;     // scale[7:6], index[5:3], base[2:0]
+        .return (scale << 6) + ( index << 3 ) + base;     // scale[7:6], index[5:3], base[2:0]
     }  
 
 
