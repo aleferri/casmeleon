@@ -4,21 +4,25 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/aleferri/casmeleon/pkg/exec"
+	"github.com/aleferri/casmeleon/pkg/expr"
 	"github.com/aleferri/casmeleon/pkg/parser"
 	"github.com/aleferri/casmeleon/pkg/text"
+	"github.com/aleferri/casmvm/pkg/opcodes"
+	"github.com/aleferri/casmvm/pkg/operators"
 )
 
-//PruneExpressionToExecutionList rewalk through the expression to generate the execution list
-func PruneExpressionToExecutionList(lang *Language, params []string, types []uint32, expr parser.CSTNode) ([]exec.Executable, error) {
-	list := []exec.Executable{}
+const USE_THIS_ADDR = 1
 
-	left, err := CompileTerm(lang, params, &list, expr.Symbols())
-	for len(left) > 0 && err == nil {
-		left, err = CompileTerm(lang, params, &list, left)
+//WalkCSTExpression walk the concrete syntax tree of an expression to convert it into SSA form
+func WalkCSTExpression(lang *Language, params []string, types []uint32, node parser.CSTNode) (expr.Converter, error) {
+	listing := []opcodes.Opcode{}
+	status := expr.MakeConverter(node.Symbols(), uint16(len(params)))
+
+	err := CompileTerm(lang, params, &listing, &status)
+	for len(status.Queue()) > 0 && err == nil {
+		err = CompileTerm(lang, params, &listing, &status)
 	}
-
-	return list, err
+	return status, err
 }
 
 var Precedence = map[string]int{
@@ -30,12 +34,12 @@ var Precedence = map[string]int{
 }
 
 //CompileTerm compile a <Term> of the expression: either <Identifier> | <Integer> | <UnaryOp> | <ParensExpr> | <InlineCall>
-func CompileTerm(lang *Language, params []string, list *[]exec.Executable, queued []text.Symbol) ([]text.Symbol, error) {
-	if len(queued) == 0 {
-		return queued, nil
+func CompileTerm(lang *Language, params []string, listing *[]opcodes.Opcode, status *expr.Converter) error {
+	if status.IsEmptyQueue() {
+		return nil
 	}
 
-	q := queued[0]
+	q := status.Poll()
 
 	switch q.ID() {
 	case text.Number:
@@ -53,130 +57,165 @@ func CompileTerm(lang *Language, params []string, list *[]exec.Executable, queue
 			}
 			v, e := strconv.ParseInt(str, base, 32)
 			if e != nil {
-				return queued[1:], e
+				return e
 			}
-			*list = append(*list, exec.ILoadOf(v))
-			return queued[1:], nil
+			atom := status.LabelAtom(expr.MakeLiteral(str, v))
+			*listing = append(*listing, opcodes.MakeIConst(atom.Local(), v))
+			status.Push(atom)
+			return nil
 		}
 	case text.Identifier:
 		{
 			for i, p := range params {
 				if p == q.Value() {
-					*list = append(*list, exec.RLoadOf(uint32(i)))
+					status.Push(expr.MakeParameter(p, int64(i), uint16(i)))
 					if p == ".addr" {
-						lang.MarkAddressUsed()
+						status.SetFlag(USE_THIS_ADDR)
 					}
-					return queued[1:], nil
+					return nil
 				}
 			}
 			t, f := lang.SetOf(q.Value())
 			if f {
-				*list = append(*list, exec.ILoadOf(int64(t.valueOf(q.Value()))))
-				return queued, nil
+				refId := t.valueOf(q.Value())
+				atom := status.LabelAtom(expr.MakeMember(q.Value(), int64(refId)))
+				*listing = append(*listing, opcodes.MakeIConst(atom.Local(), atom.Value()))
+				status.Push(atom)
+				return nil
 			}
-			return queued, errors.New("Parameter " + q.Value() + " not found")
+			return errors.New("Parameter " + q.Value() + " not found")
 		}
 	case text.RoundOpen:
 		{
 			var err error = nil
-			stack := []exec.Executable{}
 			for q.ID() != text.RoundClose && err == nil {
-				queued, err = CompileExpression(lang, params, &stack, queued[1:])
-				q = queued[0]
+				err = CompileExpression(lang, params, listing, status)
+				q = status.Front()
 			}
-			*list = append(*list, exec.BuildStackExpression(stack))
-			return queued[1:], nil
+			status.Poll()
+			return err
 		}
 	case text.OperatorNeg, text.OperatorNot, text.OperatorPlusUnary, text.OperatorMinusUnary:
 		{
-			left, err := CompileTerm(lang, params, list, queued[1:])
+			err := CompileTerm(lang, params, listing, status)
 
-			if q.ID() != text.OperatorPlus {
-				switch q.ID() {
-				case text.OperatorNeg:
-					*list = append(*list, exec.BuildComplement())
-				case text.OperatorMinus:
-					*list = append(*list, exec.BuildNegate())
-				case text.OperatorNot:
-					*list = append(*list, exec.BuildNot())
-				}
+			if q.ID() == text.OperatorPlusUnary || err != nil {
+				return err
 			}
-			return left, err
+
+			a := status.Pop()
+			resultLocal := status.LabelLocal()
+			status.Push(expr.MakeLocal("local", 0, resultLocal))
+
+			switch q.ID() {
+			case text.OperatorNeg:
+				*listing = append(*listing, opcodes.MakeUnaryOp(resultLocal, "com", opcodes.IntShape, a.Local(), operators.UnaryOperatorsSymbols["~"]))
+			case text.OperatorMinusUnary:
+				*listing = append(*listing, opcodes.MakeUnaryOp(resultLocal, "neg", opcodes.IntShape, a.Local(), operators.UnaryOperatorsSymbols["-"]))
+			case text.OperatorNot:
+				*listing = append(*listing, opcodes.MakeUnaryOp(resultLocal, "not", opcodes.IntShape, a.Local(), operators.UnaryOperatorsSymbols["!"]))
+			}
+
+			return nil
 		}
 	case text.KeywordExpr:
 		{
-			stack := []exec.Executable{}
-			inlineName := queued[1]
+			funcName := status.Poll()
 
-			q = queued[2].WithID(text.Comma)
-			queued = queued[2:]
+			stack := expr.MakeConverter(status.Queue(), status.LabelLocal())
+
+			q = stack.Poll().WithID(text.Comma) // open paren
 			var err error = nil
 			for q.ID() == text.Comma && err == nil {
-				queued, err = CompileExpression(lang, params, &stack, queued[1:])
-				q = queued[0]
+				err = CompileExpression(lang, params, listing, &stack)
+				q = stack.Poll() //comma or close paren
 			}
 
-			inlineCode, err := lang.InlineCode(inlineName.Value())
+			diff := len(status.Queue()) - len(stack.Queue())
+			status.DropFront(uint(diff))
 
 			if err != nil {
-				return queued, err
+				return err
 			}
 
-			*list = append(*list, exec.BuildStackExpression(stack), inlineCode)
-			return queued[1:], nil
+			refs := []uint16{}
+			for !stack.IsEmptyStack() {
+				refs = append(refs, stack.Pop().Local())
+			}
+
+			addr, found := lang.FindAddressOf(funcName.Value())
+			if !found {
+				return errors.New("Cannot find function " + funcName.Value())
+			}
+
+			retLabel := status.LabelLocal()
+			call := opcodes.MakeEnter(retLabel, addr, refs)
+
+			*listing = append(*listing, call)
+			status.Push(expr.MakeLocal("ret", 0, retLabel))
+			return nil
 		}
 	}
-	return queued, nil
+	return nil
+}
+
+func ReduceBinaryExpression(op string, listing *[]opcodes.Opcode, status *expr.Converter) expr.Atom {
+	resultLocal := status.LabelLocal()
+	operation := operators.BinaryOperatorsSymbols[op]
+	b := status.Pop()
+	a := status.Pop()
+	res := expr.MakeLocal("local", 0, resultLocal)
+	*listing = append(*listing, opcodes.MakeBinaryOp(resultLocal, op, opcodes.IntShape, a.Local(), b.Local(), operation))
+	status.Push(res)
+	return res
 }
 
 //CompileFactor compile the left associativity part of the expression
-func CompileFactor(lang *Language, params []string, list *[]exec.Executable, precedence *text.Symbol, queued []text.Symbol) ([]text.Symbol, error) {
-	if len(queued) == 0 {
-		return queued, nil
+func CompileFactor(lang *Language, params []string, listing *[]opcodes.Opcode, status *expr.Converter) error {
+	if status.IsEmptyQueue() {
+		return nil
 	}
-	operator := queued[0]
+	operator := status.Front()
 
 	opVal := operator.Value()
 	opPrec, isOp := Precedence[opVal]
 
 	if !isOp {
-		return queued, nil
+		return nil
 	}
 
-	left, err := CompileTerm(lang, params, list, queued[1:])
+	status.Poll()
+	err := CompileTerm(lang, params, listing, status)
 	if err != nil {
-		return left, err
+		return err
 	}
 
-	if len(left) == 0 {
-		*list = append(*list, exec.BuildReduce(opVal))
-		return left, nil
+	if status.IsEmptyQueue() {
+		ReduceBinaryExpression(opVal, listing, status)
+		return nil
 	}
 
-	other := left[0]
+	other := status.Front()
 
 	seq := other.Value()
 	seqPrec, isOp := Precedence[seq]
 
 	if isOp && seqPrec > opPrec {
-		left, err = CompileFactor(lang, params, list, &other, left)
+		err = CompileFactor(lang, params, listing, status)
 		if err != nil {
-			return left, err
+			return err
 		}
-		*list = append(*list, exec.BuildReduce(opVal))
-	} else {
-		*list = append(*list, exec.BuildReduce(opVal))
 	}
+	ReduceBinaryExpression(opVal, listing, status)
 
-	return CompileFactor(lang, params, list, nil, left)
+	return CompileFactor(lang, params, listing, status)
 }
 
-//CompileExpression compile the whole expression
-func CompileExpression(lang *Language, params []string, list *[]exec.Executable, queued []text.Symbol) ([]text.Symbol, error) {
-	left, err := CompileTerm(lang, params, list, queued)
-	if err != nil || len(left) == 0 {
-		return left, err
+func CompileExpression(lang *Language, params []string, listing *[]opcodes.Opcode, status *expr.Converter) error {
+	err := CompileTerm(lang, params, listing, status)
+	if err != nil || status.IsEmptyQueue() {
+		return err
 	}
 
-	return CompileFactor(lang, params, list, nil, left)
+	return CompileFactor(lang, params, listing, status)
 }

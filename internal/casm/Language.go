@@ -6,8 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aleferri/casmeleon/pkg/exec"
+	"github.com/aleferri/casmeleon/pkg/expr"
 	"github.com/aleferri/casmeleon/pkg/parser"
+	"github.com/aleferri/casmvm/pkg/opcodes"
+	"github.com/aleferri/casmvm/pkg/vm"
 )
 
 //Language definition
@@ -15,9 +17,18 @@ type Language struct {
 	numberBases []NumberBase
 	sets        []Set
 	opcodes     []Opcode
-	inlines     []Inline
-	addrUsed    bool
+	fnList      []vm.Callable
+	fnNames     []string
 	endianess   bool // 0 big endian, 1 little endian
+}
+
+func (l *Language) FindAddressOf(name string) (uint32, bool) {
+	for i, c := range l.fnNames {
+		if c == name {
+			return uint32(i), true
+		}
+	}
+	return 0, false
 }
 
 //SetOf return the Set of a symbol
@@ -40,19 +51,6 @@ func (l *Language) SetByName(s string) (*Set, bool) {
 		}
 	}
 	return nil, false
-}
-
-func (l *Language) InlineCode(name string) (exec.Executable, error) {
-	for _, i := range l.inlines {
-		if i.name == name {
-			return &InlineCall{i}, nil
-		}
-	}
-	return nil, errors.New("No inline named " + name + " exists")
-}
-
-func (l *Language) MarkAddressUsed() {
-	l.addrUsed = true
 }
 
 func (l *Language) FilterOpcodesByName(name string) FilterWindow {
@@ -104,7 +102,7 @@ func MakeLanguage(root parser.CSTNode) (Language, error) {
 		v, _ := strconv.ParseInt(a, 10, 32)
 		return int32(v)
 	}}
-	lang := Language{[]NumberBase{}, []Set{labels, integers}, []Opcode{}, []Inline{}, false, true}
+	lang := Language{[]NumberBase{}, []Set{labels, integers}, []Opcode{}, []vm.Callable{}, []string{}, true}
 	for _, k := range root.Children() {
 		switch k.ID() {
 		case NUMBER_BASE:
@@ -126,12 +124,16 @@ func MakeLanguage(root parser.CSTNode) (Language, error) {
 				if err != nil {
 					return lang, err
 				}
-				lang.inlines = append(lang.inlines, inline)
-				list, errBody := ExecutableListFromNode(&lang, inline.params, body, nil)
+
+				list, _, errBody := CompileListing(&lang, inline.params, body, nil)
 				if errBody != nil {
 					return lang, errBody
 				}
-				lang.inlines[len(lang.inlines)-1].runList = *list
+
+				callable := vm.MakeCallable(*list)
+
+				lang.fnList = append(lang.fnList, callable)
+				lang.fnNames = append(lang.fnNames, inline.name)
 			}
 		case OPCODE_NODE:
 			{
@@ -140,14 +142,13 @@ func MakeLanguage(root parser.CSTNode) (Language, error) {
 					return lang, err
 				}
 				lang.opcodes = append(lang.opcodes, opcode)
-				list, errBody := ExecutableListFromNode(&lang, opcode.params, body, nil)
+				list, useAddr, errBody := CompileListing(&lang, opcode.params, body, nil)
 				if errBody != nil {
 					fmt.Printf("Arguments were: %v\n", opcode.params)
 					return lang, errors.New("In Opcode " + opcode.name + ":\n" + errBody.Error())
 				}
 				lang.opcodes[len(lang.opcodes)-1].runList = *list
-				lang.opcodes[len(lang.opcodes)-1].useAddr = lang.addrUsed
-				lang.addrUsed = false
+				lang.opcodes[len(lang.opcodes)-1].useAddr = useAddr
 			}
 		}
 
@@ -155,82 +156,115 @@ func MakeLanguage(root parser.CSTNode) (Language, error) {
 	return lang, nil
 }
 
-func ExecutableListFromNode(lang *Language, params []string, root parser.CSTNode, list *[]exec.Executable) (*[]exec.Executable, error) {
-	if list == nil {
-		list = &[]exec.Executable{}
+func CompileListing(lang *Language, params []string, root parser.CSTNode, listing *[]opcodes.Opcode) (*[]opcodes.Opcode, bool, error) {
+	if listing == nil {
+		listing = &[]opcodes.Opcode{}
 	}
+
+	useAddr := false
+	nextLocal := uint16(len(params))
 
 	for _, node := range root.Children() {
 		switch node.ID() {
 		case STMT_BRANCH:
 			{
 				children := node.Children()
-				_, err := CompileExpression(lang, params, list, children[0].Symbols())
+				status := expr.MakeConverter(children[0].Symbols(), nextLocal)
+
+				err := CompileExpression(lang, params, listing, &status)
 				if err != nil {
-					return nil, err
+					return nil, false, err
 				}
 
-				taken, bodyErr := ExecutableListFromNode(lang, params, children[1], nil)
+				useAddr = useAddr || status.HasFlag(USE_THIS_ADDR)
+
+				taken, tUseAddr, bodyErr := CompileListing(lang, params, children[1], nil)
 				if bodyErr != nil {
-					return nil, bodyErr
+					return nil, false, bodyErr
 				}
+
+				useAddr = useAddr || tUseAddr
+
+				takenLen := len(*taken)
 
 				if len(children) > 2 {
-					notTaken, elseErr := ExecutableListFromNode(lang, params, children[2], nil)
+					notTaken, fUseAddr, elseErr := CompileListing(lang, params, children[2], nil)
 					if elseErr != nil {
-						return nil, elseErr
+						return nil, false, elseErr
 					}
-					*list = append(*list, exec.MakeBranchCode(*taken, *notTaken))
+
+					useAddr = useAddr || fUseAddr
+
+					notTakenLen := len(*notTaken)
+
+					brElse := opcodes.MakeBranch(0, status.Pop().Local(), int32(takenLen)+1)
+					*listing = append(*listing, brElse)
+					*listing = append(*listing, *taken...)
+					brExit := opcodes.MakeGoto(int32(notTakenLen))
+					*listing = append(*listing, brExit)
+					*listing = append(*listing, *notTaken...)
 				} else {
-					*list = append(*list, exec.MakeBranchCode(*taken, nil))
+					brExit := opcodes.MakeBranch(0, status.Pop().Local(), int32(takenLen))
+					*listing = append(*listing, brExit)
+					*listing = append(*listing, *taken...)
 				}
+				nextLocal = status.LabelLocal()
 			}
 		case STMT_ERROR:
 			{
-				*list = append(*list, exec.EmitErrorOf(0, "error, will implement later"))
+				*listing = append(*listing, opcodes.MakeSigError("error, will implement later", 0))
 			}
 		case STMT_RET:
 			{
-				_, err := CompileExpression(lang, params, list, node.Children()[0].Symbols())
+				status := expr.MakeConverter(node.Children()[0].Symbols(), nextLocal)
+				err := CompileExpression(lang, params, listing, &status)
 				if err != nil {
-					return list, err
+					return listing, false, err
 				}
-				*list = append(*list, exec.MakeReturn())
+				useAddr = useAddr || status.HasFlag(USE_THIS_ADDR)
+				*listing = append(*listing, opcodes.MakeLeave(status.Pop().Local()))
+				nextLocal = status.LabelLocal()
 			}
 		case STMT_OUT:
 			{
-				outList := []exec.Executable{}
-				for _, expr := range node.Children() {
-					execList := []exec.Executable{}
-					_, err := CompileExpression(lang, params, &execList, expr.Symbols())
+				refs := []uint16{}
+				for _, item := range node.Children() {
+					itemStatus := expr.MakeConverter(item.Symbols(), nextLocal)
+					err := CompileExpression(lang, params, listing, &itemStatus)
 					if err != nil {
-						return list, errors.New("In .out statement:\n" + err.Error())
+						return listing, false, errors.New("In .out statement:\n" + err.Error())
 					}
-					outList = append(outList, exec.BuildStackExpression(execList))
+					useAddr = useAddr || itemStatus.HasFlag(USE_THIS_ADDR)
+					refs = append(refs, itemStatus.Pop().Local())
+					nextLocal = itemStatus.LabelLocal()
 				}
-				*list = append(*list, exec.MakeOutResult(outList))
+				*listing = append(*listing, opcodes.MakeLeave(refs...))
 			}
 		case STMT_OUTR:
 			{
-				outList := []exec.Executable{}
-				for _, expr := range node.Children() {
-					execList := []exec.Executable{}
-					_, err := CompileExpression(lang, params, &execList, expr.Symbols())
+				refs := make([]uint16, len(node.Children()))
+				index := len(node.Children()) - 1
+				for _, item := range node.Children() {
+					itemStatus := expr.MakeConverter(item.Symbols(), nextLocal)
+					err := CompileExpression(lang, params, listing, &itemStatus)
 					if err != nil {
-						return list, errors.New("In .out statement:\n" + err.Error())
+						return listing, false, errors.New("In .outr statement:\n" + err.Error())
 					}
-					outList = append(outList, exec.BuildStackExpression(execList))
+					useAddr = useAddr || itemStatus.HasFlag(USE_THIS_ADDR)
+					refs[index] = itemStatus.Pop().Local()
+					index--
+					nextLocal = itemStatus.LabelLocal()
 				}
-				*list = append(*list, exec.MakeOutResultReverse(outList))
+				*listing = append(*listing, opcodes.MakeLeave(refs...))
 			}
 		case STMT_WARNING:
 			{
-				*list = append(*list, exec.EmitWarningOf(0, "error, will implement later"))
+				*listing = append(*listing, opcodes.MakeSigWarning("error, will implement later", 0))
 			}
 		}
 	}
 
-	return list, nil
+	return listing, useAddr, nil
 }
 
 //CST Tags

@@ -3,14 +3,16 @@ package main
 import (
 	"github.com/aleferri/casmeleon/internal/casm"
 	"github.com/aleferri/casmeleon/pkg/asm"
-	"github.com/aleferri/casmeleon/pkg/exec"
+	"github.com/aleferri/casmvm/pkg/opcodes"
+	"github.com/aleferri/casmvm/pkg/vm"
+	"github.com/aleferri/casmvm/pkg/vmio"
 )
 
 type OpcodeInstance struct {
 	addrInvariant bool
 	name          string
 	parameters    []asm.Symbol
-	runList       []exec.Executable
+	runList       []opcodes.Opcode
 	symTable      *SymbolTable
 	atom          uint32
 }
@@ -34,16 +36,19 @@ func (c *OpcodeInstance) Assemble(addr uint32, index int, ctx asm.Context) (uint
 
 	instances = append(instances, int64(addr))
 
-	interp := exec.MakeInterpreter(exec.FrameOf(instances), c.runList)
-	err := interp.Run()
+	callable := vm.MakeCallable(c.runList)
+	log := vmio.MakeVMLoggerConsole(vmio.ALL)
+	vm := vm.MakeVerboseNaiveVM([]vm.Callable{}, log, vm.MakeVMFrame())
+	err := vm.Run(callable, true)
+
 	if err != nil {
 		return addr, nil, err
 	}
 
-	outs := interp.PopResults()
+	outs := vm.Frame().Returns()
 	bin := []uint8{}
-	for _, v := range outs.Content() {
-		bin = append(bin, uint8(v))
+	for i := uint16(0); i < uint16(outs.Size()); i++ {
+		bin = append(bin, uint8(outs.Peek(i)))
 	}
 	return addr + uint32(len(bin))/c.atom, bin, nil
 }

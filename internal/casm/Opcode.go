@@ -3,18 +3,18 @@ package casm
 import (
 	"errors"
 
-	"github.com/aleferri/casmeleon/pkg/exec"
 	"github.com/aleferri/casmeleon/pkg/parser"
 	"github.com/aleferri/casmeleon/pkg/text"
+	"github.com/aleferri/casmvm/pkg/opcodes"
 )
 
 //Opcode declared in the assembly language
 type Opcode struct {
-	name    string            //opcode name
-	format  []uint32          //opcode parameters format
-	params  []string          //opcode parameters name
-	types   []uint32          //param types
-	runList []exec.Executable //executable operations
+	name    string           //opcode name
+	format  []uint32         //opcode parameters format
+	params  []string         //opcode parameters name
+	types   []uint32         //param types
+	runList []opcodes.Opcode //executable operations
 	useAddr bool
 }
 
@@ -30,7 +30,7 @@ func (o Opcode) Format() []uint32 {
 	return o.format
 }
 
-func (o Opcode) RunList() []exec.Executable {
+func (o Opcode) RunList() []opcodes.Opcode {
 	return o.runList
 }
 

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"reflect"
 	"testing"
 
 	"github.com/aleferri/casmeleon/pkg/text"
@@ -41,17 +40,15 @@ func TestCasmProcessing(t *testing.T) {
 		t.Fail()
 	}
 
-	for _, in := range lang.inlines {
-		fmt.Println("Inline name: " + in.name)
-		for _, exec := range in.runList {
-			fmt.Println(reflect.TypeOf(exec))
-		}
+	for i, fnName := range lang.fnNames {
+		fmt.Println("Func name: " + fnName)
+		lang.fnList[i].Dump()
 	}
 
 	for _, in := range lang.opcodes {
 		fmt.Println("Opcode name: " + in.name)
 		for _, exec := range in.runList {
-			fmt.Println(reflect.TypeOf(exec))
+			fmt.Println(exec.String())
 		}
 	}
 }
