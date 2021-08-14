@@ -59,13 +59,13 @@ Let's stop digressing further and let's dive inside the wonderful worlds of inli
     }  
 
     // Just to be sure, let's make another example, a dive in the realm of instructions encoding   
-    // We may have designed an backward instruction set full of prefixes and suffixes bytes, so we don't want to recode  
+    // We may have designed a backward instruction set full of prefixes and suffixes bytes, so we don't want to recode  
     // the logic for the suffix in every opcode. The best solution would be dropping the instruction set and burn it with fire.
     // But for some obscure reason we really want to encode it: so we let the opcode capture the pattern, but leave the processing to  
     // the specified inline. It is purely academical of course: no one would dare to invent something so bizantine    
     .inline SIB_BYTE
     .with ( base : Register, index : Register, scale : Ints ) -> {  
-        return (scale << 6) + ( index << 3 ) + base;     // scale[7:6], index[5:3], base[2:0]
+        .return (scale << 6) + ( index << 3 ) + base;     // scale[7:6], index[5:3], base[2:0]
     }  
 
 
