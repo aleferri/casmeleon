@@ -3,6 +3,8 @@ package asm
 import (
 	"errors"
 	"fmt"
+
+	"github.com/aleferri/casmvm/pkg/opcodes"
 )
 
 type BinaryImage struct {
@@ -14,7 +16,7 @@ type Slot struct {
 	addr  uint32
 }
 
-func AssembleSource(list []Compilable, ctx Context) ([]uint8, error) {
+func AssembleSource(m opcodes.VM, list []Compilable, ctx Context) ([]uint8, error) {
 	addr := uint32(0)
 	var err error
 	var img []uint8
@@ -25,7 +27,7 @@ func AssembleSource(list []Compilable, ctx Context) ([]uint8, error) {
 
 	for j, a := range list {
 		init := addr
-		addr, img, err = a.Assemble(addr, j, ctx)
+		addr, img, err = a.Assemble(m, addr, j, ctx)
 
 		if !a.IsAddressInvariant() {
 			fixLater = append(fixLater, Slot{j, init})
@@ -49,13 +51,13 @@ func AssembleSource(list []Compilable, ctx Context) ([]uint8, error) {
 		fmt.Println("Ouput oscillation, pending ", len(retry), "opcode rebuild")
 
 		for _, r := range retry {
-			fix, err := r.ReAssemble(ctx, &result)
+			fix, err := r.ReAssemble(ctx, m, &result)
 			if err != nil {
 				return img, err
 			}
 			if fix != 0 {
 				for _, v := range fixLater {
-					_, img, err = list[v.index].Assemble(v.addr, v.index, ctx)
+					_, img, err = list[v.index].Assemble(m, v.addr, v.index, ctx)
 					result[v.index] = BinaryImage{img}
 				}
 			}

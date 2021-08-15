@@ -92,6 +92,17 @@ func (lang *Language) ParseInt(value string) (int64, error) {
 	return int64(v), e
 }
 
+func (lang *Language) AssignFrame(c vm.Callable, name string) int32 {
+	n := len(lang.fnList)
+	lang.fnList = append(lang.fnList, c)
+	lang.fnNames = append(lang.fnNames, name)
+	return int32(n)
+}
+
+func (lang *Language) Executables() []vm.Callable {
+	return lang.fnList
+}
+
 func (lang *Language) Endianess() bool {
 	return lang.endianess
 }
@@ -147,6 +158,7 @@ func MakeLanguage(root parser.CSTNode) (Language, error) {
 					fmt.Printf("Arguments were: %v\n", opcode.params)
 					return lang, errors.New("In Opcode " + opcode.name + ":\n" + errBody.Error())
 				}
+				lang.fnList[opcode.frame] = vm.MakeCallable(*list)
 				lang.opcodes[len(lang.opcodes)-1].runList = *list
 				lang.opcodes[len(lang.opcodes)-1].useAddr = useAddr
 			}

@@ -1,5 +1,7 @@
 package asm
 
+import "github.com/aleferri/casmvm/pkg/opcodes"
+
 type RetryQueue struct {
 	list    map[int]Compilable
 	addrs   map[int]uint32
@@ -15,11 +17,11 @@ func (r *RetryQueue) Append(j int, addr uint32, c Compilable) {
 	r.addrs[j] = addr
 }
 
-func (r *RetryQueue) ReAssemble(ctx Context, imgs *[]BinaryImage) (int, error) {
+func (r *RetryQueue) ReAssemble(ctx Context, m opcodes.VM, imgs *[]BinaryImage) (int, error) {
 	slots := 0
 	for j, addr := range r.addrs {
 		compilable := r.list[j]
-		newAddr, img, err := compilable.Assemble(addr, j, ctx)
+		newAddr, img, err := compilable.Assemble(m, addr, j, ctx)
 		if err != nil {
 			return 0, err
 		}

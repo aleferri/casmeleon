@@ -1,5 +1,7 @@
 package asm
 
+import "github.com/aleferri/casmvm/pkg/opcodes"
+
 var emptyLabelOutput = []uint8{}
 
 type Label struct {
@@ -13,7 +15,7 @@ func MakeLabel(name string, parent *Label) *Label {
 }
 
 //Assemble make the pass
-func (l *Label) Assemble(addr uint32, index int, ctx Context) (uint32, []uint8, error) {
+func (l *Label) Assemble(m opcodes.VM, addr uint32, index int, ctx Context) (uint32, []uint8, error) {
 	if addr != l.address {
 		ctx.Refresh(l)
 	}

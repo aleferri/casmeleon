@@ -2,13 +2,15 @@ package asm
 
 import (
 	"errors"
+
+	"github.com/aleferri/casmvm/pkg/opcodes"
 )
 
 type DirectiveOrg struct {
 	address uint32
 }
 
-func (d *DirectiveOrg) Assemble(addr uint32, index int, ctx Context) (uint32, []uint8, error) {
+func (d *DirectiveOrg) Assemble(m opcodes.VM, addr uint32, index int, ctx Context) (uint32, []uint8, error) {
 	if addr > d.address {
 		return 0, emptyLabelOutput, errors.New(".org directive cannot change PC backwards")
 	}
@@ -27,7 +29,7 @@ type DirectiveAdvance struct {
 	address uint32
 }
 
-func (d *DirectiveAdvance) Assemble(addr uint32, index int, ctx Context) (uint32, []uint8, error) {
+func (d *DirectiveAdvance) Assemble(m opcodes.VM, addr uint32, index int, ctx Context) (uint32, []uint8, error) {
 	if addr > d.address {
 		return 0, emptyLabelOutput, errors.New(".advance directive cannot change PC backwards")
 	}
@@ -64,7 +66,7 @@ type DirectiveDeposit struct {
 	binaryImage []uint8
 }
 
-func (d *DirectiveDeposit) Assemble(addr uint32, index int, ctx Context) (uint32, []uint8, error) {
+func (d *DirectiveDeposit) Assemble(m opcodes.VM, addr uint32, index int, ctx Context) (uint32, []uint8, error) {
 	return addr + uint32(len(d.binaryImage)), d.binaryImage, nil
 }
 

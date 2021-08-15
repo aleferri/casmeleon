@@ -6,15 +6,17 @@ import (
 	"github.com/aleferri/casmeleon/pkg/parser"
 	"github.com/aleferri/casmeleon/pkg/text"
 	"github.com/aleferri/casmvm/pkg/opcodes"
+	"github.com/aleferri/casmvm/pkg/vm"
 )
 
 //Opcode declared in the assembly language
 type Opcode struct {
 	name    string           //opcode name
-	format  []uint32         //opcode parameters format
 	params  []string         //opcode parameters name
+	format  []uint32         //opcode parameters format
 	types   []uint32         //param types
 	runList []opcodes.Opcode //executable operations
+	frame   int32
 	useAddr bool
 }
 
@@ -48,6 +50,10 @@ func (o Opcode) StringifyFormat(lang *Language) []string {
 	}
 
 	return desc
+}
+
+func (o Opcode) Frame() int32 {
+	return o.frame
 }
 
 func (o Opcode) Accept(format []uint32, types []uint32) bool {
@@ -134,7 +140,9 @@ func PruneToOpcode(lang *Language, op parser.CSTNode) (Opcode, parser.CSTNode, e
 	types = append(types, 1)
 
 	body := children[2]
-	return Opcode{name: name.Value(), format: argsFormat, params: params, types: types}, body, nil
+	opcodeName := name.Value()
+	frame := lang.AssignFrame(vm.MakeCallable([]opcodes.Opcode{}), opcodeName)
+	return Opcode{name: opcodeName, format: argsFormat, params: params, types: types, frame: frame}, body, nil
 }
 
 func extractTypes(lang *Language, args []parser.CSTNode) (map[string]uint32, error) {

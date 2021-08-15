@@ -14,6 +14,8 @@ import (
 	"github.com/aleferri/casmeleon/pkg/asm"
 	"github.com/aleferri/casmeleon/pkg/parser"
 	"github.com/aleferri/casmeleon/pkg/text"
+	"github.com/aleferri/casmvm/pkg/vm"
+	"github.com/aleferri/casmvm/pkg/vmio"
 )
 
 func dumpOutput(originalFileName string, ui ui.UI, output []uint8) {
@@ -184,8 +186,10 @@ func main() {
 				break
 			}
 
+			log := vmio.MakeVMLoggerConsole(vmio.ALL)
+			ex := vm.MakeNaiveVM(lang.Executables(), log, vm.MakeVMFrame())
 			ctx := asm.MakeSourceContext()
-			binaryImage, compilingErr := asm.AssembleSource(program.list, ctx)
+			binaryImage, compilingErr := asm.AssembleSource(ex, program.list, ctx)
 
 			if compilingErr != nil {
 				fmt.Println(compilingErr.Error())
