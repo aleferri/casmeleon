@@ -119,6 +119,7 @@ func ParseASMFile(lang casm.Language, sourceFile string) (*AssemblyProgram, erro
 			}
 			return nil, errors.New("Error during compilation")
 		}
+
 		parser.ConsumeAll(stream, text.EOL)
 	}
 
@@ -137,7 +138,10 @@ func main() {
 	flag.StringVar(&langFileName, "lang", ".", "-lang=langfile")
 	var debugMode bool
 	flag.BoolVar(&debugMode, "debug", false, "-debug=true|false")
+	var exportAssembly string
+	flag.StringVar(&exportAssembly, "export", "bin", "-export=bin|hex")
 	flag.Parse()
+
 	tUI := ui.NewConsole(false, false)
 	if strings.EqualFold(langFileName, ".") {
 		tUI.ReportError("missing -lang=langfile", true)
@@ -179,7 +183,15 @@ func main() {
 	for _, f := range flag.Args() {
 		if !strings.HasPrefix(f, "-") {
 
+			if debugMode {
+				fmt.Println("Parsing " + f)
+			}
+
 			program, errAsm := ParseASMFile(lang, f)
+
+			if debugMode {
+				fmt.Println("End parsing")
+			}
 
 			if errAsm != nil {
 				fmt.Println(errAsm.Error())
