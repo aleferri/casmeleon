@@ -48,7 +48,7 @@ func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable
 			if err != nil {
 				return casm.WrapMatchError(err, ".alias", "\n")
 			}
-			return errors.New("Unsupported yet, casmeleon v1 did not support it, anyway")
+			return errors.New("unsupported yet, casmeleon v1 did not support it, anyway")
 		}
 	case ".db":
 		{
@@ -144,7 +144,7 @@ func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable
 	parser.Consume(stream, text.WHITESPACE)
 
 	if stream.Peek().ID() != text.EOL {
-		return fmt.Errorf("Expected End Of Line after the directive '%s', found instead '%s'", directive.Value(), stream.Next().Value())
+		return fmt.Errorf("expected End Of Line after the directive '%s', found instead '%s'", directive.Value(), stream.Next().Value())
 	}
 	stream.Next()
 	return nil
@@ -231,12 +231,10 @@ func ParseSourceLine(lang casm.Language, stream parser.Stream, table *SymbolTabl
 	} else {
 		lastToken := stream.Next()
 
-		rawArgs := []text.Symbol{}
 		tokensFormat := []text.Symbol{}
 
 		for lastToken.ID() != text.EOL {
 			tokensFormat = append(tokensFormat, lastToken)
-			rawArgs = append(rawArgs, lastToken)
 			lastToken = stream.Next()
 			if lastToken.ID() == text.OperatorMinus {
 				lastToken = stream.Next()

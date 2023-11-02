@@ -29,6 +29,8 @@ func AssembleSource(m opcodes.VM, list []Compilable, ctx Context) ([]uint8, erro
 		init := addr
 		addr, img, err = a.Assemble(m, addr, j, ctx)
 
+		fmt.Println("@", addr, ":", img)
+
 		if !a.IsAddressInvariant() {
 			fixLater = append(fixLater, Slot{j, init})
 		}
@@ -52,14 +54,16 @@ func AssembleSource(m opcodes.VM, list []Compilable, ctx Context) ([]uint8, erro
 
 		for _, r := range retry {
 			fix, err := r.ReAssemble(ctx, m, &result)
-			if err != nil {
-				return img, err
-			}
-			if fix != 0 {
+
+			if fix != 0 && err == nil {
 				for _, v := range fixLater {
 					_, img, err = list[v.index].Assemble(m, v.addr, v.index, ctx)
 					result[v.index] = BinaryImage{img}
 				}
+			}
+
+			if err != nil {
+				return img, err
 			}
 		}
 
@@ -67,15 +71,15 @@ func AssembleSource(m opcodes.VM, list []Compilable, ctx Context) ([]uint8, erro
 		passes++
 	}
 
-	fmt.Println("Ouput stabilized, done")
+	fmt.Println("Ouput stabilized in ", passes, " passes, done")
 
 	img = []uint8{}
 	for _, bin := range result {
 		img = append(img, bin.content...)
 	}
 
-	if passes < 2 {
+	if passes < 5 {
 		return img, nil
 	}
-	return img, errors.New("Infinite loop was stopped")
+	return img, errors.New("infinite loop was stopped")
 }

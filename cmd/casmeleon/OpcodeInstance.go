@@ -4,6 +4,7 @@ import (
 	"github.com/aleferri/casmeleon/internal/casm"
 	"github.com/aleferri/casmeleon/pkg/asm"
 	"github.com/aleferri/casmvm/pkg/opcodes"
+	"github.com/aleferri/casmvm/pkg/vmex"
 )
 
 type OpcodeInstance struct {
@@ -25,26 +26,27 @@ func MakeOpcodeInstance(opcode casm.Opcode, format ArgumentFormat, symTable *Sym
 
 func (c *OpcodeInstance) Assemble(m opcodes.VM, addr uint32, index int, ctx asm.Context) (uint32, []uint8, error) {
 	k := uint16(0)
-	params := []uint16{}
+
+	frame := vmex.MakeVMFrame()
+
 	for _, a := range c.parameters {
-		m.Frame().Values().Put(k, a.Value())
+		frame.Values().Put(k, a.Value())
+		k++
 		if a.IsDynamic() {
 			//Mark dynamic symbols only
 			ctx.GuardSymbol(a.Name(), index, addr, c)
 		}
-		params = append(params, k)
-		k++
 	}
 
-	m.Frame().Values().Put(k, int64(addr))
+	frame.Values().Put(k, int64(addr))
 
-	_, err := m.Enter(c.index, params...)
+	err := m.Invoke(c.index, &frame)
 
 	if err != nil {
 		return addr, nil, err
 	}
 
-	outs := m.Frame().Returns()
+	outs := frame.Returns()
 	bin := []uint8{}
 	size := uint16(outs.Size())
 	for i := uint16(0); i < size; i++ {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/aleferri/casmeleon/internal/casm"
@@ -14,7 +15,7 @@ import (
 	"github.com/aleferri/casmeleon/pkg/asm"
 	"github.com/aleferri/casmeleon/pkg/parser"
 	"github.com/aleferri/casmeleon/pkg/text"
-	"github.com/aleferri/casmvm/pkg/vm"
+	"github.com/aleferri/casmvm/pkg/vmex"
 	"github.com/aleferri/casmvm/pkg/vmio"
 )
 
@@ -37,11 +38,39 @@ func dumpOutput(originalFileName string, ui ui.UI, output []uint8) {
 	}
 }
 
+func exportOutput(originalFileName string, ui ui.UI, output []uint8) {
+	lastDot := strings.LastIndex(originalFileName, ".")
+	fileNoExtension := originalFileName[0:lastDot]
+	out, err := os.Create(fileNoExtension + ".export.txt")
+	if err != nil {
+		ui.ReportError("Output to file failed: "+err.Error(), true)
+		return
+	}
+
+	writer := bufio.NewWriter(out)
+
+	if len(output) > 1 {
+		for _, v := range output[0 : len(output)-2] {
+			bin := strconv.FormatUint(uint64(v), 2)
+			writer.WriteString("8'b" + bin)
+			writer.WriteRune('\n')
+		}
+	}
+
+	if len(output) > 0 {
+		bin := strconv.FormatUint(uint64(output[len(output)-1]), 2)
+		writer.WriteString("8'b" + bin)
+		writer.WriteRune('\n')
+	}
+
+	writer.Flush()
+}
+
 func ParseIncludedASMFile(lang casm.Language, program *AssemblyProgram, symTable *SymbolTable, sourceFile string) error {
 	var programfile, programErr = os.Open(sourceFile)
 	if programErr != nil {
 		wnd, _ := os.Getwd()
-		return fmt.Errorf("Error during opening of file %s from %s\n", sourceFile, wnd)
+		return fmt.Errorf("error during opening of file %s from %s", sourceFile, wnd)
 	}
 
 	code := text.BuildSource(sourceFile)
@@ -72,7 +101,7 @@ func ParseIncludedASMFile(lang casm.Language, program *AssemblyProgram, symTable
 			} else {
 				parseErr.PrettyPrint(&code)
 			}
-			return errors.New("Error during compilation")
+			return errors.New("error during compilation")
 		}
 		parser.ConsumeAll(stream, text.EOL)
 	}
@@ -84,7 +113,7 @@ func ParseASMFile(lang casm.Language, sourceFile string) (*AssemblyProgram, erro
 	var programfile, programErr = os.Open(sourceFile)
 	if programErr != nil {
 		wnd, _ := os.Getwd()
-		return nil, fmt.Errorf("Error during opening of file %s from %s\n", sourceFile, wnd)
+		return nil, fmt.Errorf("error during opening of file %s from %s", sourceFile, wnd)
 	}
 
 	code := text.BuildSource(sourceFile)
@@ -117,7 +146,7 @@ func ParseASMFile(lang casm.Language, sourceFile string) (*AssemblyProgram, erro
 			} else {
 				parseErr.PrettyPrint(&code)
 			}
-			return nil, errors.New("Error during compilation")
+			return nil, errors.New("error during compilation")
 		}
 
 		parser.ConsumeAll(stream, text.EOL)
@@ -127,7 +156,7 @@ func ParseASMFile(lang casm.Language, sourceFile string) (*AssemblyProgram, erro
 		for _, miss := range symTable.watchList {
 			fmt.Printf("Missing symbol %s\n", miss.Value())
 		}
-		return nil, fmt.Errorf("Missing %d symbols:\n", len(symTable.watchList))
+		return nil, fmt.Errorf("missing %d symbols", len(symTable.watchList))
 	}
 	programfile.Close()
 	return &program, nil
@@ -139,7 +168,7 @@ func main() {
 	var debugMode bool
 	flag.BoolVar(&debugMode, "debug", false, "-debug=true|false")
 	var exportAssembly string
-	flag.StringVar(&exportAssembly, "export", "bin", "-export=bin|hex")
+	flag.StringVar(&exportAssembly, "export", "none", "-export=bin|hex")
 	flag.Parse()
 
 	tUI := ui.NewConsole(false, false)
@@ -194,12 +223,12 @@ func main() {
 			}
 
 			if errAsm != nil {
-				fmt.Println(errAsm.Error())
+				fmt.Println("Error: " + errAsm.Error())
 				break
 			}
 
 			log := vmio.MakeVMLoggerConsole(vmio.ALL)
-			ex := vm.MakeNaiveVM(lang.Executables(), log, vm.MakeVMFrame())
+			ex := vmex.MakeNaiveVM(lang.Executables(), log, vmex.MakeVMFrame())
 			ctx := asm.MakeSourceContext()
 			binaryImage, compilingErr := asm.AssembleSource(ex, program.list, ctx)
 
@@ -209,6 +238,10 @@ func main() {
 			}
 
 			dumpOutput(f, tUI, binaryImage)
+
+			if exportAssembly == "bin" {
+				exportOutput(f, tUI, binaryImage)
+			}
 		}
 	}
 }

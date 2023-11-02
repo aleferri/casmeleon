@@ -13,7 +13,7 @@ import (
 
 const USE_THIS_ADDR = 1
 
-//WalkCSTExpression walk the concrete syntax tree of an expression to convert it into SSA form
+// WalkCSTExpression walk the concrete syntax tree of an expression to convert it into SSA form
 func WalkCSTExpression(lang *Language, params []string, types []uint32, node parser.CSTNode) (expr.Converter, error) {
 	listing := []opcodes.Opcode{}
 	status := expr.MakeConverter(node.Symbols(), uint16(len(params)))
@@ -33,7 +33,7 @@ var Precedence = map[string]int{
 	"!": 4, "~": 4, ".len": 4,
 }
 
-//CompileTerm compile a <Term> of the expression: either <Identifier> | <Integer> | <UnaryOp> | <ParensExpr> | <InlineCall>
+// CompileTerm compile a <Term> of the expression: either <Identifier> | <Integer> | <UnaryOp> | <ParensExpr> | <InlineCall>
 func CompileTerm(lang *Language, params []string, listing *[]opcodes.Opcode, status *expr.Converter) error {
 	if status.IsEmptyQueue() {
 		return nil
@@ -149,7 +149,7 @@ func CompileTerm(lang *Language, params []string, listing *[]opcodes.Opcode, sta
 			}
 
 			retLabel := status.LabelLocal()
-			call := opcodes.MakeEnter(retLabel, addr, refs)
+			call := opcodes.MakeEnter([]uint16{retLabel}, addr, refs)
 
 			*listing = append(*listing, call)
 			status.Push(expr.MakeLocal("ret", 0, retLabel))
@@ -170,7 +170,7 @@ func ReduceBinaryExpression(op string, listing *[]opcodes.Opcode, status *expr.C
 	return res
 }
 
-//CompileFactor compile the left associativity part of the expression
+// CompileFactor compile the left associativity part of the expression
 func CompileFactor(lang *Language, params []string, listing *[]opcodes.Opcode, status *expr.Converter) error {
 	if status.IsEmptyQueue() {
 		return nil

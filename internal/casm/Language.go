@@ -9,15 +9,15 @@ import (
 	"github.com/aleferri/casmeleon/pkg/expr"
 	"github.com/aleferri/casmeleon/pkg/parser"
 	"github.com/aleferri/casmvm/pkg/opcodes"
-	"github.com/aleferri/casmvm/pkg/vm"
+	"github.com/aleferri/casmvm/pkg/vmex"
 )
 
-//Language definition
+// Language definition
 type Language struct {
 	numberBases []NumberBase
 	sets        []Set
 	opcodes     []Opcode
-	fnList      []vm.Callable
+	fnList      []vmex.Callable
 	fnNames     []string
 	endianess   bool // 0 big endian, 1 little endian
 }
@@ -31,7 +31,7 @@ func (l *Language) FindAddressOf(name string) (uint32, bool) {
 	return 0, false
 }
 
-//SetOf return the Set of a symbol
+// SetOf return the Set of a symbol
 func (l *Language) SetOf(s string) (*Set, bool) {
 	lenSets := len(l.sets) - 1
 	for i := range l.sets {
@@ -43,7 +43,7 @@ func (l *Language) SetOf(s string) (*Set, bool) {
 	return nil, false
 }
 
-//SetByName return the set by his name
+// SetByName return the set by his name
 func (l *Language) SetByName(s string) (*Set, bool) {
 	for _, set := range l.sets {
 		if set.name == s {
@@ -92,14 +92,14 @@ func (lang *Language) ParseInt(value string) (int64, error) {
 	return int64(v), e
 }
 
-func (lang *Language) AssignFrame(c vm.Callable, name string) int32 {
+func (lang *Language) AssignFrame(c vmex.Callable, name string) int32 {
 	n := len(lang.fnList)
 	lang.fnList = append(lang.fnList, c)
 	lang.fnNames = append(lang.fnNames, name)
 	return int32(n)
 }
 
-func (lang *Language) Executables() []vm.Callable {
+func (lang *Language) Executables() []vmex.Callable {
 	return lang.fnList
 }
 
@@ -113,7 +113,7 @@ func MakeLanguage(root parser.CSTNode) (Language, error) {
 		v, _ := strconv.ParseInt(a, 10, 32)
 		return int32(v)
 	}}
-	lang := Language{[]NumberBase{}, []Set{labels, integers}, []Opcode{}, []vm.Callable{}, []string{}, true}
+	lang := Language{[]NumberBase{}, []Set{labels, integers}, []Opcode{}, []vmex.Callable{}, []string{}, true}
 	for _, k := range root.Children() {
 		switch k.ID() {
 		case NUMBER_BASE:
@@ -141,7 +141,7 @@ func MakeLanguage(root parser.CSTNode) (Language, error) {
 					return lang, errBody
 				}
 
-				callable := vm.MakeCallable(*list)
+				callable := vmex.MakeCallable(inline.name, inline.params, *list)
 
 				lang.fnList = append(lang.fnList, callable)
 				lang.fnNames = append(lang.fnNames, inline.name)
@@ -158,7 +158,7 @@ func MakeLanguage(root parser.CSTNode) (Language, error) {
 					fmt.Printf("Arguments were: %v\n", opcode.params)
 					return lang, errors.New("In Opcode " + opcode.name + ":\n" + errBody.Error())
 				}
-				lang.fnList[opcode.frame] = vm.MakeCallable(*list)
+				lang.fnList[opcode.frame] = vmex.MakeCallable(opcode.name, opcode.params, *list)
 				lang.opcodes[len(lang.opcodes)-1].runList = *list
 				lang.opcodes[len(lang.opcodes)-1].useAddr = useAddr
 			}
@@ -279,7 +279,7 @@ func CompileListing(lang *Language, params []string, root parser.CSTNode, listin
 	return listing, useAddr, nil
 }
 
-//CST Tags
+// CST Tags
 const (
 	EXPRESSION   = 0
 	NUMBER_BASE  = 1

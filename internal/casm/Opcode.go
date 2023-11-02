@@ -6,10 +6,10 @@ import (
 	"github.com/aleferri/casmeleon/pkg/parser"
 	"github.com/aleferri/casmeleon/pkg/text"
 	"github.com/aleferri/casmvm/pkg/opcodes"
-	"github.com/aleferri/casmvm/pkg/vm"
+	"github.com/aleferri/casmvm/pkg/vmex"
 )
 
-//Opcode declared in the assembly language
+// Opcode declared in the assembly language
 type Opcode struct {
 	name    string           //opcode name
 	params  []string         //opcode parameters name
@@ -100,13 +100,13 @@ func StringifyFormat(lang *Language, format []uint32, types []uint32) []string {
 	return desc
 }
 
-//Param Types
+// Param Types
 const (
 	NUMBER = 0
 	LABEL  = 1
 )
 
-//PruneToOpcode remove the header from the opcode CST and return Opcode and Body CST
+// PruneToOpcode remove the header from the opcode CST and return Opcode and Body CST
 func PruneToOpcode(lang *Language, op parser.CSTNode) (Opcode, parser.CSTNode, error) {
 	toks := op.Symbols()
 	name := toks[1]
@@ -141,7 +141,7 @@ func PruneToOpcode(lang *Language, op parser.CSTNode) (Opcode, parser.CSTNode, e
 
 	body := children[2]
 	opcodeName := name.Value()
-	frame := lang.AssignFrame(vm.MakeCallable([]opcodes.Opcode{}), opcodeName)
+	frame := lang.AssignFrame(vmex.MakeCallable("", []string{}, []opcodes.Opcode{}), opcodeName)
 	return Opcode{name: opcodeName, format: argsFormat, params: params, types: types, frame: frame}, body, nil
 }
 

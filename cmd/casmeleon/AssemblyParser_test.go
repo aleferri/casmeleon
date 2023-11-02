@@ -9,7 +9,7 @@ import (
 	"github.com/aleferri/casmeleon/internal/casm"
 	"github.com/aleferri/casmeleon/pkg/asm"
 	"github.com/aleferri/casmeleon/pkg/text"
-	"github.com/aleferri/casmvm/pkg/vm"
+	"github.com/aleferri/casmvm/pkg/vmex"
 	"github.com/aleferri/casmvm/pkg/vmio"
 )
 
@@ -85,7 +85,7 @@ func TestCasmProcessing(t *testing.T) {
 	}
 
 	log := vmio.MakeVMLoggerConsole(vmio.ALL)
-	ex := vm.MakeNaiveVM(lang.Executables(), log, vm.MakeVMFrame())
+	ex := vmex.MakeNaiveVM(lang.Executables(), log, vmex.MakeVMFrame())
 
 	ctx := asm.MakeSourceContext()
 	_, compilingErr := asm.AssembleSource(ex, asmProgram.list, ctx)
