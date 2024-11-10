@@ -2,18 +2,16 @@ package casm
 
 import (
 	"github.com/aleferri/casmeleon/pkg/parser"
-	"github.com/aleferri/casmvm/pkg/opcodes"
 )
 
-//Inline is a temporary structure
+// Inline is a temporary structure
 type Inline struct {
-	name    string           //name
-	params  []string         //parameters name
-	types   []uint32         //param types
-	runList []opcodes.Opcode //executables for the inline
+	name   string   //name
+	params []string //parameters name
+	types  []uint32 //param types
 }
 
-//PruneToInline remove the header from the inline CST and return Inline and Body CST
+// PruneToInline remove the header from the inline CST and return Inline and Body CST
 func PruneToInline(lang *Language, op parser.CSTNode) (Inline, parser.CSTNode, error) {
 	toks := op.Symbols()
 	name := toks[1]

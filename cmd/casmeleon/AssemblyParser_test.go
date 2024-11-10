@@ -85,7 +85,9 @@ func TestCasmProcessing(t *testing.T) {
 	}
 
 	log := vmio.MakeVMLoggerConsole(vmio.ALL)
-	ex := vmex.MakeNaiveVM(lang.Executables(), log, vmex.MakeVMFrame())
+	ex := vmex.MakeVerboseNaiveVM(lang.Executables(), log, vmex.MakeVMFrame())
+
+	ExportTraces(&lang, asmProgram.list)
 
 	ctx := asm.MakeSourceContext()
 	_, compilingErr := asm.AssembleSource(ex, asmProgram.list, ctx)

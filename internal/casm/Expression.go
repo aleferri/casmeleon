@@ -143,6 +143,14 @@ func CompileTerm(lang *Language, params []string, listing *[]opcodes.Opcode, sta
 				refs = append(refs, stack.Pop().Local())
 			}
 
+			i, j := 0, len(refs)-1
+
+			for i < j {
+				refs[i], refs[j] = refs[j], refs[i]
+				i++
+				j--
+			}
+
 			addr, found := lang.FindAddressOf(funcName.Value())
 			if !found {
 				return errors.New("Cannot find function " + funcName.Value())

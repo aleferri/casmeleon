@@ -21,7 +21,7 @@ func (win FilterWindow) PickFirst() (Opcode, error) {
 	for _, op := range win.filtered {
 		return op, nil
 	}
-	return Opcode{}, errors.New("No opcode found for provided parameters")
+	return Opcode{}, errors.New("no opcode found for provided parameters")
 }
 
 func (win FilterWindow) Candidates() []Opcode {

@@ -162,12 +162,45 @@ func ParseASMFile(lang casm.Language, sourceFile string) (*AssemblyProgram, erro
 	return &program, nil
 }
 
+func ExportTraces(lang *casm.Language, list []asm.Compilable) {
+	file, err := os.Create("dump.trace")
+	if err != nil {
+		return
+	}
+
+	for _, entry := range lang.Executables() {
+		fmt.Fprintln(file, "fn", entry.Name())
+		for _, op := range entry.Listing() {
+			fmt.Fprintln(file, op.String())
+		}
+		fmt.Fprintln(file)
+	}
+
+	fmt.Fprintln(file, "fn file_listing")
+	for _, call := range list {
+		instance, ok := call.(*OpcodeInstance)
+		if ok {
+			args := []int64{}
+			for _, a := range instance.parameters {
+				args = append(args, a.Value())
+			}
+
+			args = append(args, 0xFFFFFFFF)
+			fmt.Fprintln(file, "fn", instance.name, instance.line)
+			fmt.Fprintln(file, "invoke", instance.invokeTarget, args)
+		}
+	}
+}
+
 func main() {
 	var langFileName string
-	flag.StringVar(&langFileName, "lang", ".", "-lang=langfile")
 	var debugMode bool
-	flag.BoolVar(&debugMode, "debug", false, "-debug=true|false")
 	var exportAssembly string
+	var dumpTrace bool
+
+	flag.StringVar(&langFileName, "lang", ".", "-lang=langfile")
+	flag.BoolVar(&debugMode, "debug", false, "-debug=true|false")
+	flag.BoolVar(&dumpTrace, "trace", false, "-debug=true|false")
 	flag.StringVar(&exportAssembly, "export", "none", "-export=bin|hex")
 	flag.Parse()
 
@@ -225,6 +258,10 @@ func main() {
 			if errAsm != nil {
 				fmt.Println("Error: " + errAsm.Error())
 				break
+			}
+
+			if dumpTrace {
+				ExportTraces(&lang, program.list)
 			}
 
 			log := vmio.MakeVMLoggerConsole(vmio.ALL)

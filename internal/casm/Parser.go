@@ -38,7 +38,7 @@ func ParseCasm(stream parser.Stream, repo text.Source) (parser.CSTNode, error) {
 		default:
 			{
 				fmt.Println(len(idDescriptor))
-				err = fmt.Errorf("Undefined symbol '%s'", idDescriptor[id])
+				err = fmt.Errorf("undefined symbol '%s'", idDescriptor[id])
 			}
 		}
 
@@ -53,7 +53,7 @@ func ParseCasm(stream parser.Stream, repo text.Source) (parser.CSTNode, error) {
 	return root, err
 }
 
-//ParseNumberBase parse a number base directive
+// ParseNumberBase parse a number base directive
 func ParseNumberBase(stream parser.Stream) (parser.CSTNode, error) {
 	seq, err := parser.RequireSequence(stream, text.KeywordNum, text.Number, text.QuotedString, text.QuotedString)
 	if err != nil {
@@ -62,7 +62,7 @@ func ParseNumberBase(stream parser.Stream) (parser.CSTNode, error) {
 	return parser.BuildLeaf(seq, NUMBER_BASE), nil
 }
 
-//ParseSet parse a set of symbols
+// ParseSet parse a set of symbols
 func ParseSet(stream parser.Stream) (parser.CSTNode, error) {
 	seq, err := parser.RequireSequence(stream, text.KeywordSet, text.Identifier)
 	if err != nil {
@@ -78,7 +78,7 @@ func ParseSet(stream parser.Stream) (parser.CSTNode, error) {
 	return set, nil
 }
 
-//ParseOpcode from the source stream
+// ParseOpcode from the source stream
 func ParseOpcode(stream parser.Stream) (parser.CSTNode, error) {
 	seq, err := parser.RequireSequence(stream, text.KeywordOpcode, text.Identifier)
 	if err != nil {
@@ -125,7 +125,7 @@ func ParseOpcode(stream parser.Stream) (parser.CSTNode, error) {
 	return opcodeNode, nil
 }
 
-//ParseInline from the source stream
+// ParseInline from the source stream
 func ParseInline(stream parser.Stream) (parser.CSTNode, error) {
 	seq, err := parser.RequireSequence(stream, text.KeywordInline, text.Identifier, text.KeywordWith)
 	if err != nil {
@@ -156,13 +156,13 @@ func ParseInline(stream parser.Stream) (parser.CSTNode, error) {
 	return inlineNode, nil
 }
 
-//ParseWithArgs after the opcode or inline declaration
+// ParseWithArgs after the opcode or inline declaration
 func ParseWithArgs(stream parser.Stream) (parser.CSTNode, error) {
 	arg, err := parser.RequireSequence(stream, text.Identifier, text.Colon, text.Identifier)
 	return parser.BuildLeaf(arg, OPCODE_ARGS), err
 }
 
-//ParseArgs parse the arguments of the opcode
+// ParseArgs parse the arguments of the opcode
 func ParseArgs(stream parser.Stream) (parser.CSTNode, error) {
 	acc := []text.Symbol{}
 	for stream.Peek().ID() != text.DoubleCurlyClose {
@@ -171,7 +171,7 @@ func ParseArgs(stream parser.Stream) (parser.CSTNode, error) {
 	return parser.BuildLeaf(acc, OPCODE_ARGS), nil
 }
 
-//ParseStatement inside a block
+// ParseStatement inside a block
 func ParseStatement(stream parser.Stream) (parser.CSTNode, error) {
 	switch stream.Peek().ID() {
 	case text.KeywordIF:
@@ -193,7 +193,7 @@ func ParseStatement(stream parser.Stream) (parser.CSTNode, error) {
 	)
 }
 
-//ParseBlock of code
+// ParseBlock of code
 func ParseBlock(stream parser.Stream) (parser.CSTNode, error) {
 	body, err := parser.AcceptInsetDelegate(stream, text.CurlyOpen, text.CurlyClose, ParseStatement)
 	if err != nil {
@@ -207,7 +207,7 @@ func ParseBlock(stream parser.Stream) (parser.CSTNode, error) {
 	return block, nil
 }
 
-//ParseBranch parse a branch
+// ParseBranch parse a branch
 func ParseBranch(stream parser.Stream) (parser.CSTNode, error) {
 	parser.Expect(stream, text.KeywordIF)
 	expr, err := ParseExpression(stream)
@@ -236,12 +236,16 @@ func ParseBranch(stream parser.Stream) (parser.CSTNode, error) {
 	return branch, nil
 }
 
-//ParseOut parse an out
+// ParseOut parse an out
 func ParseOut(stream parser.Stream) (parser.CSTNode, error) {
 	outK := stream.Next()
 	exprs, err := parser.AcceptPatternWithTest(stream, text.SquareOpen, text.SquareClose, text.Comma, ParseExpression)
 
-	parser.Expect(stream, text.Semicolon)
+	if err != nil {
+		return nil, err
+	}
+
+	err = parser.Expect(stream, text.Semicolon)
 
 	id := uint32(STMT_OUT)
 	if outK.ID() == text.KeywordOutR {
@@ -255,7 +259,7 @@ func ParseOut(stream parser.Stream) (parser.CSTNode, error) {
 	return outNode, err
 }
 
-//ParseReturn parse an out
+// ParseReturn parse an out
 func ParseReturn(stream parser.Stream) (parser.CSTNode, error) {
 	parser.Expect(stream, text.KeywordReturn)
 	expr, err := ParseExpression(stream)
@@ -270,7 +274,7 @@ func ParseReturn(stream parser.Stream) (parser.CSTNode, error) {
 	return outNode, err
 }
 
-//ParseError parse an out
+// ParseError parse an out
 func ParseError(stream parser.Stream) (parser.CSTNode, error) {
 	syms, err := parser.RequireSequence(stream, text.KeywordError, text.Identifier, text.Comma, text.QuotedString, text.Semicolon)
 	if err != nil {
@@ -279,7 +283,7 @@ func ParseError(stream parser.Stream) (parser.CSTNode, error) {
 	return parser.BuildLeaf(syms, STMT_WARNING), nil
 }
 
-//ParseWarning parse an out
+// ParseWarning parse an out
 func ParseWarning(stream parser.Stream) (parser.CSTNode, error) {
 	syms, err := parser.RequireSequence(stream, text.KeywordWarning, text.Identifier, text.Comma, text.QuotedString, text.Semicolon)
 	if err != nil {
@@ -384,7 +388,7 @@ func parseFactors(stream parser.Stream, expr []text.Symbol) ([]text.Symbol, erro
 	return partial, nil
 }
 
-//ParseExpression of any kind
+// ParseExpression of any kind
 func ParseExpression(stream parser.Stream) (parser.CSTNode, error) {
 	expr, err := parseFactors(stream, []text.Symbol{})
 	if err == nil {

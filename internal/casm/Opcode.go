@@ -52,7 +52,7 @@ func (o Opcode) StringifyFormat(lang *Language) []string {
 	return desc
 }
 
-func (o Opcode) Frame() int32 {
+func (o Opcode) InvokeTarget() int32 {
 	return o.frame
 }
 

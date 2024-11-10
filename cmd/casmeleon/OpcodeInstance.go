@@ -8,18 +8,19 @@ import (
 )
 
 type OpcodeInstance struct {
-	addrInvariant bool
 	name          string
 	parameters    []asm.Symbol
 	symTable      *SymbolTable
 	atom          uint32
-	index         int32
+	invokeTarget  int32
+	line          uint32
+	addrInvariant bool
 }
 
 func MakeOpcodeInstance(opcode casm.Opcode, format ArgumentFormat, symTable *SymbolTable, atom uint32) *OpcodeInstance {
 	inst := OpcodeInstance{
 		addrInvariant: opcode.UseAddress(), name: opcode.Name(), parameters: format.parameters,
-		symTable: symTable, atom: atom, index: opcode.Frame(),
+		symTable: symTable, atom: atom, invokeTarget: opcode.InvokeTarget(),
 	}
 	return &inst
 }
@@ -40,7 +41,7 @@ func (c *OpcodeInstance) Assemble(m opcodes.VM, addr uint32, index int, ctx asm.
 
 	frame.Values().Put(k, int64(addr))
 
-	err := m.Invoke(c.index, &frame)
+	err := m.Start(c.invokeTarget, &frame)
 
 	if err != nil {
 		return addr, nil, err

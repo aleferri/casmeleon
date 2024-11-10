@@ -224,7 +224,7 @@ func CompileListing(lang *Language, params []string, root parser.CSTNode, listin
 			}
 		case STMT_ERROR:
 			{
-				*listing = append(*listing, opcodes.MakeSigError("error, will implement later", 0))
+				*listing = append(*listing, opcodes.MakeSigError("error, precise message is not yet implemented", 0))
 			}
 		case STMT_RET:
 			{
@@ -271,7 +271,7 @@ func CompileListing(lang *Language, params []string, root parser.CSTNode, listin
 			}
 		case STMT_WARNING:
 			{
-				*listing = append(*listing, opcodes.MakeSigWarning("error, will implement later", 0))
+				*listing = append(*listing, opcodes.MakeSigWarning("warning, precise message is not yet implemented", 0))
 			}
 		}
 	}
