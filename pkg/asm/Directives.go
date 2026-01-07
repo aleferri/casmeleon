@@ -2,6 +2,8 @@ package asm
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
 
 	"github.com/aleferri/casmvm/pkg/opcodes"
 )
@@ -14,11 +16,15 @@ func (d *DirectiveOrg) Assemble(m opcodes.VM, addr uint32, index int, ctx Contex
 	if addr > d.address {
 		return 0, emptyLabelOutput, errors.New(".org directive cannot change PC backwards")
 	}
-	return d.address, emptyLabelOutput, nil
+	return d.address * (ctx.ByteSize() / 8), emptyLabelOutput, nil
 }
 
 func (d *DirectiveOrg) IsAddressInvariant() bool {
 	return false
+}
+
+func (d *DirectiveOrg) String() string {
+	return ".org " + strconv.FormatUint(uint64(d.address), 10)
 }
 
 func MakeOrg(target uint32) *DirectiveOrg {
@@ -33,12 +39,16 @@ func (d *DirectiveAdvance) Assemble(m opcodes.VM, addr uint32, index int, ctx Co
 	if addr > d.address {
 		return 0, emptyLabelOutput, errors.New(".advance directive cannot change PC backwards")
 	}
-	pad := make([]uint8, d.address-addr)
+	pad := make([]uint8, (d.address-addr)*(ctx.ByteSize()/8))
 	return d.address, pad, nil
 }
 
 func (d *DirectiveAdvance) IsAddressInvariant() bool {
 	return false
+}
+
+func (d *DirectiveAdvance) String() string {
+	return ".advance " + strconv.FormatUint(uint64(d.address), 10)
 }
 
 func MakeAdvance(target uint32) *DirectiveAdvance {
@@ -72,6 +82,10 @@ func (d *DirectiveDeposit) Assemble(m opcodes.VM, addr uint32, index int, ctx Co
 
 func (d *DirectiveDeposit) IsAddressInvariant() bool {
 	return true
+}
+
+func (d *DirectiveDeposit) String() string {
+	return ".d" + fmt.Sprintf("%v", d.binaryImage)
 }
 
 func MakeDeposit(values []uint8) *DirectiveDeposit {

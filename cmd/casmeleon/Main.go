@@ -197,11 +197,13 @@ func main() {
 	var debugMode bool
 	var exportAssembly string
 	var dumpTrace bool
+	var byteSize uint
 
 	flag.StringVar(&langFileName, "lang", ".", "-lang=langfile")
 	flag.BoolVar(&debugMode, "debug", false, "-debug=true|false")
-	flag.BoolVar(&dumpTrace, "trace", false, "-debug=true|false")
+	flag.BoolVar(&dumpTrace, "trace", false, "-trace=true|false")
 	flag.StringVar(&exportAssembly, "export", "none", "-export=bin|hex")
+	flag.UintVar(&byteSize, "byteSize", 8, "-byteSize=8|16|32")
 	flag.Parse()
 
 	tUI := ui.NewConsole(false, false)
@@ -231,7 +233,7 @@ func main() {
 		return
 	}
 
-	lang, semErr := casm.MakeLanguage(root)
+	lang, semErr := casm.MakeLanguage(root, uint32(byteSize))
 	if semErr != nil {
 		fmt.Println("Error " + semErr.Error())
 		return
@@ -266,7 +268,7 @@ func main() {
 
 			log := vmio.MakeVMLoggerConsole(vmio.ALL)
 			ex := vmex.MakeNaiveVM(lang.Executables(), log, vmex.MakeVMFrame())
-			ctx := asm.MakeSourceContext()
+			ctx := asm.MakeSourceContext(uint32(byteSize))
 			binaryImage, compilingErr := asm.AssembleSource(ex, program.list, ctx)
 
 			if compilingErr != nil {

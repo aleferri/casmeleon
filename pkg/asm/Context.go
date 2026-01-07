@@ -6,4 +6,5 @@ type Context interface {
 	ClearAll()
 	Refresh(sym Symbol)
 	RetryList() []RetryQueue
+	ByteSize() uint32
 }

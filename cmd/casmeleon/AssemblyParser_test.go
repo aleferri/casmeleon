@@ -39,7 +39,7 @@ func TestCasmProcessing(t *testing.T) {
 		t.Fail()
 	}
 
-	lang, semErr := casm.MakeLanguage(root)
+	lang, semErr := casm.MakeLanguage(root, 8)
 	if semErr != nil {
 		fmt.Println("Error " + semErr.Error())
 		t.Fail()
@@ -89,7 +89,7 @@ func TestCasmProcessing(t *testing.T) {
 
 	ExportTraces(&lang, asmProgram.list)
 
-	ctx := asm.MakeSourceContext()
+	ctx := asm.MakeSourceContext(8)
 	_, compilingErr := asm.AssembleSource(ex, asmProgram.list, ctx)
 	if compilingErr != nil {
 		t.Error(compilingErr.Error())

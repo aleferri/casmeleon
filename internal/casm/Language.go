@@ -19,7 +19,8 @@ type Language struct {
 	opcodes     []Opcode
 	fnList      []vmex.Callable
 	fnNames     []string
-	endianess   bool // 0 big endian, 1 little endian
+	bigEndian   bool   // little endian if false
+	byteSize    uint32 // 8 is standard byte
 }
 
 func (l *Language) FindAddressOf(name string) (uint32, bool) {
@@ -103,17 +104,25 @@ func (lang *Language) Executables() []vmex.Callable {
 	return lang.fnList
 }
 
-func (lang *Language) Endianess() bool {
-	return lang.endianess
+func (lang *Language) IsBigEndian() bool {
+	return lang.bigEndian
 }
 
-func MakeLanguage(root parser.CSTNode) (Language, error) {
+func (lang *Language) IsLittleEndian() bool {
+	return !lang.bigEndian
+}
+
+func (lang *Language) ByteSize() uint32 {
+	return lang.byteSize
+}
+
+func MakeLanguage(root parser.CSTNode, byteSize uint32) (Language, error) {
 	labels := Set{"_FormatLabels", 0, func(string) int32 { return 0 }}
 	integers := Set{"Ints", 1, func(a string) int32 {
 		v, _ := strconv.ParseInt(a, 10, 32)
 		return int32(v)
 	}}
-	lang := Language{[]NumberBase{}, []Set{labels, integers}, []Opcode{}, []vmex.Callable{}, []string{}, true}
+	lang := Language{[]NumberBase{}, []Set{labels, integers}, []Opcode{}, []vmex.Callable{}, []string{}, true, byteSize}
 	for _, k := range root.Children() {
 		switch k.ID() {
 		case NUMBER_BASE:

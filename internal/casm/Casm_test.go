@@ -34,7 +34,7 @@ func TestCasmProcessing(t *testing.T) {
 		t.Fail()
 	}
 
-	lang, semErr := MakeLanguage(root)
+	lang, semErr := MakeLanguage(root, 8)
 	if semErr != nil {
 		fmt.Println("Error " + semErr.Error())
 		t.Fail()

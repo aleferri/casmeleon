@@ -113,7 +113,7 @@ func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable
 					str := p.Value()
 					trimmed := strings.TrimSuffix(strings.TrimPrefix(str, "\""), "\"")
 					for _, c := range bytes.Runes([]byte(trimmed)) {
-						if lang.Endianess() {
+						if lang.IsLittleEndian() {
 							values = append(values, uint8(c&255))
 							values = append(values, uint8(c>>8))
 						} else {
@@ -124,7 +124,7 @@ func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable
 					}
 				} else if p.ID() == text.Number {
 					val, _ := lang.ParseUint(p.Value())
-					if lang.Endianess() {
+					if lang.IsLittleEndian() {
 						values = append(values, uint8(val&255))
 						values = append(values, uint8(val>>8))
 					} else {
@@ -162,7 +162,7 @@ func ParseLabel(lang casm.Language, stream parser.Stream, table *SymbolTable, pr
 		}
 		fqln = table.lastGlobalLabel.Name() + labelName
 	}
-	label := asm.MakeLabel(fqln, nil)
+	label := asm.MakeLabel(fqln, nil, lang.ByteSize())
 	if !isLocalLabel {
 		table.lastGlobalLabel = label
 	}

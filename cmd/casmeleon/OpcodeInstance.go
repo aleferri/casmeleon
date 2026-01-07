@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/aleferri/casmeleon/internal/casm"
 	"github.com/aleferri/casmeleon/pkg/asm"
 	"github.com/aleferri/casmvm/pkg/opcodes"
@@ -39,7 +41,7 @@ func (c *OpcodeInstance) Assemble(m opcodes.VM, addr uint32, index int, ctx asm.
 		}
 	}
 
-	frame.Values().Put(k, int64(addr))
+	frame.Values().Put(k, int64(addr/(ctx.ByteSize()/8)))
 
 	err := m.Start(c.invokeTarget, &frame)
 
@@ -59,4 +61,8 @@ func (c *OpcodeInstance) Assemble(m opcodes.VM, addr uint32, index int, ctx asm.
 
 func (c *OpcodeInstance) IsAddressInvariant() bool {
 	return c.addrInvariant
+}
+
+func (c *OpcodeInstance) String() string {
+	return fmt.Sprint(c.line) + ": " + c.name
 }

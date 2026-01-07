@@ -29,7 +29,7 @@ func AssembleSource(m opcodes.VM, list []Compilable, ctx Context) ([]uint8, erro
 		init := addr
 		addr, img, err = a.Assemble(m, addr, j, ctx)
 
-		fmt.Println("@", addr, ":", img)
+		fmt.Println("@", addr, ":", a, "->", img)
 
 		if !a.IsAddressInvariant() {
 			fixLater = append(fixLater, Slot{j, init})

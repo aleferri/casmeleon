@@ -1,11 +1,12 @@
 package asm
 
 type SourceContext struct {
-	guards map[string]RetryQueue
+	guards   map[string]RetryQueue
+	byteSize uint32
 }
 
-func MakeSourceContext() *SourceContext {
-	return &SourceContext{map[string]RetryQueue{}}
+func MakeSourceContext(byteSize uint32) *SourceContext {
+	return &SourceContext{map[string]RetryQueue{}, byteSize}
 }
 
 func (ctx *SourceContext) EnsureExists(name string) RetryQueue {
@@ -45,4 +46,8 @@ func (ctx *SourceContext) RetryList() []RetryQueue {
 		}
 	}
 	return list
+}
+
+func (ctx *SourceContext) ByteSize() uint32 {
+	return ctx.byteSize
 }
