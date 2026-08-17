@@ -258,7 +258,7 @@ func ParseSourceLine(lang casm.Language, stream parser.Stream, table *SymbolTabl
 			return casm.WrapMatchError(matchErr, name.Value(), "\n")
 		}
 
-		prog.Add(MakeOpcodeInstance(op, args, table, 1))
+		prog.Add(MakeOpcodeInstance(op, args, table, lang.ByteSize()/8, lang.IsBigEndian()))
 
 		return nil
 	}

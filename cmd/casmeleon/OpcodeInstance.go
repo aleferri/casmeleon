@@ -14,15 +14,19 @@ type OpcodeInstance struct {
 	parameters    []asm.Symbol
 	symTable      *SymbolTable
 	atom          uint32
+	bigEndian     bool
 	invokeTarget  int32
 	line          uint32
 	addrInvariant bool
 }
 
-func MakeOpcodeInstance(opcode casm.Opcode, format ArgumentFormat, symTable *SymbolTable, atom uint32) *OpcodeInstance {
+func MakeOpcodeInstance(opcode casm.Opcode, format ArgumentFormat, symTable *SymbolTable, atom uint32, bigEndian bool) *OpcodeInstance {
+	if atom == 0 {
+		atom = 1
+	}
 	inst := OpcodeInstance{
 		addrInvariant: opcode.UseAddress(), name: opcode.Name(), parameters: format.parameters,
-		symTable: symTable, atom: atom, invokeTarget: opcode.InvokeTarget(),
+		symTable: symTable, atom: atom, bigEndian: bigEndian, invokeTarget: opcode.InvokeTarget(),
 	}
 	return &inst
 }
@@ -53,10 +57,19 @@ func (c *OpcodeInstance) Assemble(m opcodes.VM, addr uint32, index int, ctx asm.
 	bin := []uint8{}
 	size := uint16(outs.Size())
 	for i := uint16(0); i < size; i++ {
-		//TODO switch for atom size
-		bin = append(bin, uint8(outs.Peek(i)))
+		//Every value returned by .out is one atom, spread over atom bytes
+		v := uint64(outs.Peek(i))
+		if c.bigEndian {
+			for b := c.atom; b > 0; b-- {
+				bin = append(bin, uint8(v>>(8*(b-1))))
+			}
+		} else {
+			for b := uint32(0); b < c.atom; b++ {
+				bin = append(bin, uint8(v>>(8*b)))
+			}
+		}
 	}
-	return addr + uint32(size)/c.atom, bin, nil
+	return addr + uint32(size)*c.atom, bin, nil
 }
 
 func (c *OpcodeInstance) IsAddressInvariant() bool {

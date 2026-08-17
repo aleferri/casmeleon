@@ -1,5 +1,7 @@
 package asm
 
+import "sort"
+
 type SourceContext struct {
 	guards   map[string]RetryQueue
 	byteSize uint32
@@ -39,8 +41,15 @@ func (ctx *SourceContext) Refresh(sym Symbol) {
 }
 
 func (ctx *SourceContext) RetryList() []RetryQueue {
+	names := make([]string, 0, len(ctx.guards))
+	for name := range ctx.guards {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
 	list := []RetryQueue{}
-	for _, g := range ctx.guards {
+	for _, name := range names {
+		g := ctx.guards[name]
 		if g.changed {
 			list = append(list, g)
 		}

@@ -13,10 +13,11 @@ type DirectiveOrg struct {
 }
 
 func (d *DirectiveOrg) Assemble(m opcodes.VM, addr uint32, index int, ctx Context) (uint32, []uint8, error) {
-	if addr > d.address {
+	target := d.address * (ctx.ByteSize() / 8)
+	if addr > target {
 		return 0, emptyLabelOutput, errors.New(".org directive cannot change PC backwards")
 	}
-	return d.address * (ctx.ByteSize() / 8), emptyLabelOutput, nil
+	return target, emptyLabelOutput, nil
 }
 
 func (d *DirectiveOrg) IsAddressInvariant() bool {
@@ -36,11 +37,12 @@ type DirectiveAdvance struct {
 }
 
 func (d *DirectiveAdvance) Assemble(m opcodes.VM, addr uint32, index int, ctx Context) (uint32, []uint8, error) {
-	if addr > d.address {
+	target := d.address * (ctx.ByteSize() / 8)
+	if addr > target {
 		return 0, emptyLabelOutput, errors.New(".advance directive cannot change PC backwards")
 	}
-	pad := make([]uint8, (d.address-addr)*(ctx.ByteSize()/8))
-	return d.address, pad, nil
+	pad := make([]uint8, target-addr)
+	return target, pad, nil
 }
 
 func (d *DirectiveAdvance) IsAddressInvariant() bool {

@@ -22,11 +22,15 @@ func PruneToInline(lang *Language, op parser.CSTNode) (Inline, parser.CSTNode, e
 		return Inline{}, nil, err
 	}
 
+	//Order of the parameters is the order of declaration: iterating argsLUT would
+	//take it from a Go map, and the randomized iteration order would bind the
+	//parameters differently at every run
 	params := []string{}
 	types := []uint32{}
-	for k, v := range argsLUT {
-		params = append(params, k)
-		types = append(types, v)
+	for _, arg := range children[0].Children() {
+		name := arg.Symbols()[0].Value()
+		params = append(params, name)
+		types = append(types, argsLUT[name])
 	}
 
 	body := children[1]
