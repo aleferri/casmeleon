@@ -274,13 +274,13 @@ func ParseReturn(stream parser.Stream) (parser.CSTNode, error) {
 	return outNode, err
 }
 
-// ParseError parse an out
+// ParseError parse an .error statement
 func ParseError(stream parser.Stream) (parser.CSTNode, error) {
 	syms, err := parser.RequireSequence(stream, text.KeywordError, text.Identifier, text.Comma, text.QuotedString, text.Semicolon)
 	if err != nil {
 		return nil, err
 	}
-	return parser.BuildLeaf(syms, STMT_WARNING), nil
+	return parser.BuildLeaf(syms, STMT_ERROR), nil
 }
 
 // ParseWarning parse an out

@@ -76,7 +76,10 @@ func CompileTerm(lang *Language, params []string, listing *[]opcodes.Opcode, sta
 				}
 			}
 			t, f := lang.SetOf(q.Value())
-			if f {
+			//sets 0 and 1 are the builtins _FormatLabels and Ints, whose valueOf never
+			//returns -1: without this guard Contains is true for any string and an
+			//unknown identifier silently compiles to the constant 0
+			if f && t.ID() > 1 {
 				refId := t.valueOf(q.Value())
 				atom := status.LabelAtom(expr.MakeMember(q.Value(), int64(refId)))
 				*listing = append(*listing, opcodes.MakeIConst(atom.Local(), atom.Value()))

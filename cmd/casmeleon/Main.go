@@ -193,6 +193,10 @@ func ExportTraces(lang *casm.Language, list []asm.Compilable) {
 }
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	var langFileName string
 	var debugMode bool
 	var exportAssembly string
@@ -209,12 +213,12 @@ func main() {
 	tUI := ui.NewConsole(false, false)
 	if strings.EqualFold(langFileName, ".") {
 		tUI.ReportError("missing -lang=langfile", true)
-		return
+		return 1
 	}
 	langFile, err := os.Open(langFileName)
 	if err != nil {
 		tUI.ReportError("failed open of file "+langFileName+", "+err.Error(), true)
-		return
+		return 1
 	}
 	source := bufio.NewReader(langFile)
 	repo := text.BuildSource(langFileName)
@@ -230,13 +234,13 @@ func main() {
 		} else {
 			parseErr.PrettyPrint(&repo)
 		}
-		return
+		return 1
 	}
 
 	lang, semErr := casm.MakeLanguage(root, uint32(byteSize))
 	if semErr != nil {
 		fmt.Println("Error " + semErr.Error())
-		return
+		return 1
 	}
 
 	SetNumberPrefixes(lang.NumberPrefixes())
@@ -244,8 +248,10 @@ func main() {
 
 	langFile.Close()
 	if tUI.GetErrorCount() > 0 {
-		return
+		return 1
 	}
+
+	status := 0
 
 	for _, f := range flag.Args() {
 		if !strings.HasPrefix(f, "-") {
@@ -262,6 +268,7 @@ func main() {
 
 			if errAsm != nil {
 				fmt.Println("Error: " + errAsm.Error())
+				status = 1
 				break
 			}
 
@@ -276,7 +283,8 @@ func main() {
 
 			if compilingErr != nil {
 				fmt.Println(compilingErr.Error())
-				return
+				status = 1
+				break
 			}
 
 			dumpOutput(f, tUI, binaryImage)
@@ -286,4 +294,6 @@ func main() {
 			}
 		}
 	}
+
+	return status
 }
