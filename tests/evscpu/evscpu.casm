@@ -1,0 +1,99 @@
+
+.num 16 "0x" ""
+.num 2 "0b" ""
+
+.inline OPC_HIGH
+.with ( opc: Ints, addr12: Ints ) -> {
+    .if addr12 >= 4096 {
+        .error addr12, "Cannot refer to address outside the first 4096 positions";
+    }
+    
+    .return ( opc + ( ( addr12 >> 8 ) & 0x0F ) );
+}
+
+.inline OPC_LOW
+.with ( addr12: Ints ) -> {
+    .if addr12 >= 4096 {
+        .error addr12, "Cannot refer to address outside the first 4096 positions";
+    }
+    .return addr12 & 0xFF;
+}
+
+// Binary ALU
+.opcode ADD {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0x00, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode SUB {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0x10, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode AND {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0x20, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode NOR {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0x30, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode LIT {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .if addr12 >= 4096 {
+        .error addr12, "Cannot load literal outside the first 4096 values";
+    }
+    .out [ .expr OPC_HIGH(0x50, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode INC {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0x60, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode SHR {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0x70, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode JMP {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0x80, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode JPI {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0x90, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode JNZ {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0xA0, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode JZE {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0xB0, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode LDA {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0xC0, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode LDI {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0xD0, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode STA {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0xE0, addr12), .expr OPC_LOW(addr12) ];
+}
+
+.opcode STI {{ addr12 }}
+.with ( addr12 : Ints ) -> {
+    .out [ .expr OPC_HIGH(0xF0, addr12), .expr OPC_LOW(addr12) ];
+}

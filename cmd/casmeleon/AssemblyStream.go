@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"strings"
 	"unicode"
 
 	"github.com/aleferri/casmeleon/pkg/parser"
@@ -10,9 +11,32 @@ import (
 	"github.com/aleferri/casmeleon/pkg/text"
 )
 
-// IdentifySymbol in the casm language
+// numberPrefixes holds the prefixes declared by .num in the language file.
+// IdentifySymbol needs them to classify literals that do not start with a digit.
+var numberPrefixes []string
+
+// SetNumberPrefixes must be called after the language file has been parsed
+func SetNumberPrefixes(prefixes []string) {
+	numberPrefixes = prefixes
+}
+
+func hasDeclaredPrefix(str string) bool {
+	for _, p := range numberPrefixes {
+		if len(str) > len(p) && strings.HasPrefix(str, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// IdentifySymbol in the assembly source. Unlike the homonym in internal/casm, this
+// one must consult the grammar declared by .num in the language file: the .casm has
+// already been parsed when this runs, so prefixes are known.
 func IdentifySymbol(s []rune, fileOffset uint32, count uint32) text.Symbol {
 	if unicode.IsDigit(s[0]) {
+		return text.SymbolOf(fileOffset, count, string(s), text.Number)
+	}
+	if hasDeclaredPrefix(string(s)) {
 		return text.SymbolOf(fileOffset, count, string(s), text.Number)
 	}
 	if s[0] == '\n' || s[0] == '\r' {

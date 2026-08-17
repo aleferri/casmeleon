@@ -64,6 +64,17 @@ func (l *Language) FilterOpcodesByName(name string) FilterWindow {
 	return wnd
 }
 
+// NumberPrefixes returns the non-empty prefixes of the declared number bases
+func (lang *Language) NumberPrefixes() []string {
+	out := []string{}
+	for _, base := range lang.numberBases {
+		if base.prefix != "" {
+			out = append(out, base.prefix)
+		}
+	}
+	return out
+}
+
 func (lang *Language) ParseUint(value string) (uint64, error) {
 	for _, base := range lang.numberBases {
 		if base.prefix != "" {

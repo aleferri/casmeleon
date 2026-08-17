@@ -140,11 +140,11 @@ func ParseASMFile(lang casm.Language, sourceFile string) (*AssemblyProgram, erro
 		}
 		parseErr := ParseSourceLine(lang, stream, &symTable, &program)
 		if parseErr != nil {
-			parseErr, ok := parseErr.(*casm.ParserError)
+			typedErr, ok := parseErr.(*casm.ParserError)
 			if !ok {
 				fmt.Println(parseErr.Error())
 			} else {
-				parseErr.PrettyPrint(&code)
+				typedErr.PrettyPrint(&code)
 			}
 			return nil, errors.New("error during compilation")
 		}
@@ -239,6 +239,9 @@ func main() {
 		return
 	}
 
+	SetNumberPrefixes(lang.NumberPrefixes())
+	RelaxNumberPrefixDelimiters(lang.NumberPrefixes())
+
 	langFile.Close()
 	if tUI.GetErrorCount() > 0 {
 		return
@@ -267,7 +270,7 @@ func main() {
 			}
 
 			log := vmio.MakeVMLoggerConsole(vmio.ALL)
-			ex := vmex.MakeNaiveVM(lang.Executables(), log, vmex.MakeVMFrame())
+			ex := vmex.MakeInterpreter(lang.Executables(), log, vmex.MakeVMFrame())
 			ctx := asm.MakeSourceContext(uint32(byteSize))
 			binaryImage, compilingErr := asm.AssembleSource(ex, program.list, ctx)
 

@@ -85,7 +85,7 @@ func TestCasmProcessing(t *testing.T) {
 	}
 
 	log := vmio.MakeVMLoggerConsole(vmio.ALL)
-	ex := vmex.MakeVerboseNaiveVM(lang.Executables(), log, vmex.MakeVMFrame())
+	ex := vmex.MakeVerboseInterpreter(lang.Executables(), log, vmex.MakeVMFrame())
 
 	ExportTraces(&lang, asmProgram.list)
 
