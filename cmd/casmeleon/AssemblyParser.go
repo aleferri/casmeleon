@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -14,6 +13,68 @@ import (
 
 func IsDirective(s string) bool {
 	return s == ".advance" || s == ".org" || s == ".alias" || s == ".db" || s == ".dw"
+}
+
+//ParseDepositValues consumes the comma separated value list of a .db or a .dw.
+//Numbers and quoted strings become constants, identifiers become symbols
+//resolved at assembly time, so that a label can be deposited.
+func ParseDepositValues(lang casm.Language, stream parser.Stream, table *SymbolTable, directive string) ([]asm.Symbol, error) {
+	values := []asm.Symbol{}
+
+	first := true
+	for first || stream.Peek().ID() == text.Comma {
+		if !first {
+			stream.Next()
+		}
+		first = false
+
+		negate := ""
+		if stream.Peek().ID() == text.OperatorMinus {
+			negate = stream.Next().Value()
+		}
+		tok, err := parser.RequireAny(stream, text.Identifier, text.Number, text.QuotedString)
+		if err != nil {
+			return values, casm.WrapMatchError(err, directive, "\n")
+		}
+
+		switch tok.ID() {
+		case text.QuotedString:
+			{
+				str := strings.TrimSuffix(strings.TrimPrefix(tok.Value(), "\""), "\"")
+				for _, c := range bytes.Runes([]byte(str)) {
+					values = append(values, asm.MakeConstant(int64(c)))
+				}
+			}
+		case text.Number:
+			{
+				val, convErr := lang.ParseInt(negate + tok.Value())
+				if convErr != nil {
+					return values, convErr
+				}
+				values = append(values, asm.MakeConstant(val))
+			}
+		default:
+			{
+				if negate != "" {
+					return values, fmt.Errorf("cannot negate the symbol '%s' in %s", tok.Value(), directive)
+				}
+				name := tok.Value()
+				if name[0] == '.' {
+					if table.lastGlobalLabel == nil {
+						return values, fmt.Errorf("local label '%s' in %s without a global label before it", name, directive)
+					}
+					tok = tok.WithText(table.lastGlobalLabel.Name() + name)
+				}
+				lookup, found := table.Search(tok.Value())
+				if !found {
+					lookup = MakePatchSymbol(tok.Value(), table)
+					table.Watch(tok)
+				}
+				values = append(values, lookup)
+			}
+		}
+	}
+	return values, nil
 }
 
 func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable, prog *AssemblyProgram, directive text.Symbol) error {
@@ -44,101 +105,38 @@ func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable
 		}
 	case ".alias":
 		{
-			_, err := parser.RequireSequence(stream, text.Identifier, text.Number)
+			syms, err := parser.RequireSequence(stream, text.Identifier, text.Number)
 			if err != nil {
 				return casm.WrapMatchError(err, ".alias", "\n")
 			}
-			return errors.New("unsupported yet, casmeleon v1 did not support it, anyway")
+			name := syms[0].Value()
+			if _, exists := table.Search(name); exists {
+				return fmt.Errorf("symbol '%s' is already defined", name)
+			}
+			val, convErr := lang.ParseInt(syms[1].Value())
+			if convErr != nil {
+				return convErr
+			}
+			//a named constant is a static symbol: it never moves, so it does not
+			//participate in the address fixed point at all
+			table.Add(MakeNamedConstant(name, val))
+			table.UnWatch(name)
 		}
 	case ".db":
 		{
-			rawVals := []text.Symbol{}
-
-			sym, err := parser.RequireAny(stream, text.Identifier, text.Number, text.QuotedString)
-			rawVals = append(rawVals, sym)
+			values, err := ParseDepositValues(lang, stream, table, ".db")
 			if err != nil {
-				return casm.WrapMatchError(err, ".db", "\n")
+				return err
 			}
-			for stream.Peek().ID() == text.Comma {
-				stream.Next()
-				toSum := ""
-				if stream.Peek().ID() == text.OperatorMinus {
-					toSum = stream.Next().Value()
-				}
-				sym, err = parser.RequireAny(stream, text.Identifier, text.Number, text.QuotedString)
-				if err != nil {
-					return casm.WrapMatchError(err, ".db", "\n")
-				}
-				rawVals = append(rawVals, sym.WithText(toSum+sym.Value()))
-			}
-			values := []uint8{}
-			for _, p := range rawVals {
-				if p.ID() == text.QuotedString {
-					str := p.Value()
-					values = append(values, []byte(strings.TrimSuffix(strings.TrimPrefix(str, "\""), "\""))...)
-				} else if p.ID() == text.Number {
-					val, _ := lang.ParseUint(p.Value())
-					values = append(values, uint8(val))
-				} else if p.ID() == text.Identifier {
-					values = append(values, 0)
-					fmt.Println("Unsupported deposit of identifiers, using 0 as a value, proper support will be implemented later")
-				}
-			}
-			prog.Add(asm.MakeDeposit(values))
+			prog.Add(asm.MakeDepositSymbols(values, 1, !lang.IsLittleEndian()))
 		}
 	case ".dw":
 		{
-			rawVals := []text.Symbol{}
-
-			sym, err := parser.RequireAny(stream, text.Identifier, text.Number, text.QuotedString)
-			rawVals = append(rawVals, sym)
+			values, err := ParseDepositValues(lang, stream, table, ".dw")
 			if err != nil {
-				return casm.WrapMatchError(err, ".dw", "\n")
+				return err
 			}
-			for stream.Peek().ID() == text.Comma {
-				stream.Next()
-				toSum := ""
-				if stream.Peek().ID() == text.OperatorMinus {
-					toSum = stream.Next().Value()
-				}
-				sym, err = parser.RequireAny(stream, text.Identifier, text.Number, text.QuotedString)
-				if err != nil {
-					return casm.WrapMatchError(err, ".dw", "\n")
-				}
-				rawVals = append(rawVals, sym.WithText(toSum+sym.Value()))
-			}
-			values := []uint8{}
-			for _, p := range rawVals {
-				if p.ID() == text.QuotedString {
-					str := p.Value()
-					trimmed := strings.TrimSuffix(strings.TrimPrefix(str, "\""), "\"")
-					for _, c := range bytes.Runes([]byte(trimmed)) {
-						if lang.IsLittleEndian() {
-							values = append(values, uint8(c&255))
-							values = append(values, uint8(c>>8))
-						} else {
-							values = append(values, uint8(c>>8))
-							values = append(values, uint8(c&255))
-						}
-
-					}
-				} else if p.ID() == text.Number {
-					val, _ := lang.ParseUint(p.Value())
-					if lang.IsLittleEndian() {
-						values = append(values, uint8(val&255))
-						values = append(values, uint8(val>>8))
-					} else {
-						values = append(values, uint8(val>>8))
-						values = append(values, uint8(val&255))
-					}
-
-				} else if p.ID() == text.Identifier {
-					values = append(values, 0)
-					values = append(values, 0)
-					fmt.Println("Unsupported deposit of identifiers, using 0 as a value, proper support will be implemented later")
-				}
-			}
-			prog.Add(asm.MakeDeposit(values))
+			prog.Add(asm.MakeDepositSymbols(values, 2, !lang.IsLittleEndian()))
 		}
 	}
 	parser.Consume(stream, text.WHITESPACE)

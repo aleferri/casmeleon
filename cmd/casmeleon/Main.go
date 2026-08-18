@@ -92,6 +92,10 @@ func ParseIncludedASMFile(lang casm.Language, program *AssemblyProgram, symTable
 			if includedErr != nil {
 				return includedErr
 			}
+			// the directive is a whole line: consume its end and look at the
+			// next one, or a following .include would reach ParseSourceLine
+			parser.ConsumeAll(stream, text.EOL)
+			continue
 		}
 		parseErr := ParseSourceLine(lang, stream, symTable, program)
 		if parseErr != nil {
@@ -137,6 +141,8 @@ func ParseASMFile(lang casm.Language, sourceFile string) (*AssemblyProgram, erro
 			if includedErr != nil {
 				return nil, includedErr
 			}
+			parser.ConsumeAll(stream, text.EOL)
+			continue
 		}
 		parseErr := ParseSourceLine(lang, stream, &symTable, &program)
 		if parseErr != nil {

@@ -250,7 +250,15 @@ func CompileListing(lang *Language, params []string, root parser.CSTNode, listin
 			}
 		case STMT_ERROR:
 			{
-				*listing = append(*listing, opcodes.MakeSigError("error, precise message is not yet implemented", 0))
+				syms := node.Symbols()
+				status := expr.MakeConverter(syms[1:2], nextLocal)
+				err := CompileExpression(lang, params, listing, &status)
+				if err != nil {
+					return listing, false, errors.New("In .error statement:\n" + err.Error())
+				}
+				msg := strings.Trim(syms[3].Value(), "\"")
+				*listing = append(*listing, opcodes.MakeSigError(msg+", value ", status.Pop().Local()))
+				nextLocal = status.LabelLocal()
 			}
 		case STMT_RET:
 			{
@@ -297,7 +305,15 @@ func CompileListing(lang *Language, params []string, root parser.CSTNode, listin
 			}
 		case STMT_WARNING:
 			{
-				*listing = append(*listing, opcodes.MakeSigWarning("warning, precise message is not yet implemented", 0))
+				syms := node.Symbols()
+				status := expr.MakeConverter(syms[1:2], nextLocal)
+				err := CompileExpression(lang, params, listing, &status)
+				if err != nil {
+					return listing, false, errors.New("In .warning statement:\n" + err.Error())
+				}
+				msg := strings.Trim(syms[3].Value(), "\"")
+				*listing = append(*listing, opcodes.MakeSigWarning(msg+", value ", status.Pop().Local()))
+				nextLocal = status.LabelLocal()
 			}
 		}
 	}

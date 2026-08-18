@@ -24,8 +24,9 @@ func MakeOpcodeInstance(opcode casm.Opcode, format ArgumentFormat, symTable *Sym
 	if atom == 0 {
 		atom = 1
 	}
+	//an opcode that reads .addr is exactly the one that is NOT invariant to it
 	inst := OpcodeInstance{
-		addrInvariant: opcode.UseAddress(), name: opcode.Name(), parameters: format.parameters,
+		addrInvariant: !opcode.UseAddress(), name: opcode.Name(), parameters: format.parameters,
 		symTable: symTable, atom: atom, bigEndian: bigEndian, invokeTarget: opcode.InvokeTarget(),
 	}
 	return &inst

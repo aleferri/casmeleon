@@ -1,0 +1,27 @@
+// Caso di regressione: un opcode la cui lunghezza dipende dal valore
+// dell'operando, usato con un'etichetta definita piu' avanti.
+//
+// Alla prima passata l'etichetta non e' risolta e vale 0, quindi si sceglie la
+// forma corta; quando si risolve serve la forma lunga, l'istruzione cresce di
+// un byte e tutto quello che segue si sposta. Le etichette vanno ricalcolate.
+
+.num 16 "0x" ""
+
+.opcode LD {{ # k }}
+.with ( k : Ints ) -> {
+    .if k > 255 {
+        .out [ 0xC2, k & 0xFF, k >> 8 ];
+    } .else {
+        .out [ 0x90, k ];
+    }
+}
+
+.opcode JSR {{ a }}
+.with ( a : Ints ) -> {
+    .out [ 0xC4, a & 0xFF, a >> 8 ];
+}
+
+.opcode RET {{ }}
+.with ( ) -> {
+    .out [ 0x01 ];
+}

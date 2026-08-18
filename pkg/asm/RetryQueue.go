@@ -21,6 +21,9 @@ func (r *RetryQueue) Append(j int, addr uint32, c Compilable) {
 	r.addrs[j] = addr
 }
 
+//ReAssemble is no longer used by AssembleSource: reassembling a subset of the
+//slots at the addresses recorded by a previous pass is what made stale label
+//addresses survive. Kept for API compatibility, safe to drop.
 func (r *RetryQueue) ReAssemble(ctx Context, m opcodes.VM, imgs *[]BinaryImage) (int, error) {
 	//Iteration over a map is randomized in Go: without sorting, both the order of
 	//reassembly and the returned slot vary between runs on the same source
@@ -47,4 +50,16 @@ func (r *RetryQueue) ReAssemble(ctx Context, m opcodes.VM, imgs *[]BinaryImage) 
 		}
 	}
 	return slots, nil
+}
+
+//Slots returns the indexes registered on this queue, sorted. AssembleSource
+//uses them to know which items depend on a symbol that moved, so that a pass
+//can reassemble those and reuse the bytes of everything else.
+func (r *RetryQueue) Slots() []int {
+	order := make([]int, 0, len(r.list))
+	for j := range r.list {
+		order = append(order, j)
+	}
+	sort.Ints(order)
+	return order
 }
