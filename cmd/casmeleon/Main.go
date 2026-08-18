@@ -202,12 +202,14 @@ func run() int {
 	var exportAssembly string
 	var dumpTrace bool
 	var byteSize uint
+	var endian string
 
 	flag.StringVar(&langFileName, "lang", ".", "-lang=langfile")
 	flag.BoolVar(&debugMode, "debug", false, "-debug=true|false")
 	flag.BoolVar(&dumpTrace, "trace", false, "-trace=true|false")
 	flag.StringVar(&exportAssembly, "export", "none", "-export=bin|hex")
 	flag.UintVar(&byteSize, "byteSize", 8, "-byteSize=8|16|32")
+	flag.StringVar(&endian, "endian", "big", "-endian=big|little")
 	flag.Parse()
 
 	tUI := ui.NewConsole(false, false)
@@ -237,7 +239,10 @@ func run() int {
 		return 1
 	}
 
-	lang, semErr := casm.MakeLanguage(root, uint32(byteSize))
+	if !strings.EqualFold(endian, "big") && !strings.EqualFold(endian, "little") {
+		tUI.ReportError("-endian must be big or little", true)
+	}
+	lang, semErr := casm.MakeLanguageEndian(root, uint32(byteSize), strings.EqualFold(endian, "big"))
 	if semErr != nil {
 		fmt.Println("Error " + semErr.Error())
 		return 1

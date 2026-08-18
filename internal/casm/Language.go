@@ -128,12 +128,18 @@ func (lang *Language) ByteSize() uint32 {
 }
 
 func MakeLanguage(root parser.CSTNode, byteSize uint32) (Language, error) {
+	return MakeLanguageEndian(root, byteSize, true)
+}
+
+// MakeLanguageEndian builds a language with an explicit byte order for opcodes
+// wider than one byte.
+func MakeLanguageEndian(root parser.CSTNode, byteSize uint32, bigEndian bool) (Language, error) {
 	labels := Set{"_FormatLabels", 0, func(string) int32 { return 0 }}
 	integers := Set{"Ints", 1, func(a string) int32 {
 		v, _ := strconv.ParseInt(a, 10, 32)
 		return int32(v)
 	}}
-	lang := Language{[]NumberBase{}, []Set{labels, integers}, []Opcode{}, []vmex.Callable{}, []string{}, true, byteSize}
+	lang := Language{[]NumberBase{}, []Set{labels, integers}, []Opcode{}, []vmex.Callable{}, []string{}, bigEndian, byteSize}
 	for _, k := range root.Children() {
 		switch k.ID() {
 		case NUMBER_BASE:
