@@ -11,8 +11,36 @@ import (
 	"github.com/aleferri/casmeleon/pkg/text"
 )
 
+//UnescapeString resolves the backslash escapes the scanner preserved inside a
+//quoted literal.  An unknown escape yields the character itself, so that a
+//lone backslash is never silently dropped.
+func UnescapeString(s string) string {
+	var b strings.Builder
+	runes := bytes.Runes([]byte(s))
+	for i := 0; i < len(runes); i++ {
+		if runes[i] != '\\' || i+1 >= len(runes) {
+			b.WriteRune(runes[i])
+			continue
+		}
+		i++
+		switch runes[i] {
+		case 'n':
+			b.WriteRune('\n')
+		case 'r':
+			b.WriteRune('\r')
+		case 't':
+			b.WriteRune('\t')
+		case '0':
+			b.WriteRune(rune(0))
+		default:
+			b.WriteRune(runes[i])
+		}
+	}
+	return b.String()
+}
+
 func IsDirective(s string) bool {
-	return s == ".advance" || s == ".org" || s == ".alias" || s == ".db" || s == ".dw"
+	return s == ".advance" || s == ".org" || s == ".alias" || s == ".db" || s == ".dw" || s == ".dd"
 }
 
 //ParseDepositValues consumes the comma separated value list of a .db or a .dw.
@@ -40,7 +68,7 @@ func ParseDepositValues(lang casm.Language, stream parser.Stream, table *SymbolT
 		switch tok.ID() {
 		case text.QuotedString:
 			{
-				str := strings.TrimSuffix(strings.TrimPrefix(tok.Value(), "\""), "\"")
+				str := UnescapeString(strings.TrimSuffix(strings.TrimPrefix(tok.Value(), "\""), "\""))
 				for _, c := range bytes.Runes([]byte(str)) {
 					values = append(values, asm.MakeConstant(int64(c)))
 				}
@@ -137,6 +165,17 @@ func ParseDirective(lang casm.Language, stream parser.Stream, table *SymbolTable
 				return err
 			}
 			prog.Add(asm.MakeDepositSymbols(values, 2, !lang.IsLittleEndian()))
+		}
+	case ".dd":
+		{
+			//deposit at the width the target actually uses, so that a machine
+			//declared with -byteSize=16 or 32 can state its data directly
+			//instead of going through a pseudo opcode
+			values, err := ParseDepositValues(lang, stream, table, ".dd")
+			if err != nil {
+				return err
+			}
+			prog.Add(asm.MakeDepositSymbols(values, lang.ByteSize()/8, !lang.IsLittleEndian()))
 		}
 	}
 	parser.Consume(stream, text.WHITESPACE)

@@ -93,6 +93,17 @@ func ClassifyMergeableTokens(tokens []Token) {
 	}
 }
 
+//endsWithOddBackslashes reports whether the token ends in a run of an odd
+//number of backslashes, which means the delimiter that follows is escaped
+//rather than closing the literal
+func endsWithOddBackslashes(t Token) bool {
+	n := 0
+	for i := len(t.slice) - 1; i >= 0 && t.slice[i] == '\\'; i-- {
+		n++
+	}
+	return n%2 == 1
+}
+
 //MergeASMLine matching tokens
 func MergeASMLine(line []Token) []Token {
 	valid := []Token{}
@@ -111,8 +122,9 @@ func MergeASMLine(line []Token) []Token {
 			valid = append(valid, t)
 		} else {
 			if match != -1 {
+				escaped := endsWithOddBackslashes(*merged)
 				*merged = merged.Merge(t)
-				if match == t.basicID {
+				if match == t.basicID && !escaped {
 					valid = append(valid, *merged)
 					match = -1
 					merged = nil
