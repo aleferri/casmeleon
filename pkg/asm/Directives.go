@@ -12,12 +12,11 @@ type DirectiveOrg struct {
 	address uint32
 }
 
+//Assemble moves the address and emits nothing. Unlike .advance it may go
+//backwards: it places what follows at an address instead of padding up to one,
+//so a source can lay out its regions in any order it likes.
 func (d *DirectiveOrg) Assemble(m opcodes.VM, addr uint32, index int, ctx Context) (uint32, []uint8, error) {
-	target := d.address * (ctx.ByteSize() / 8)
-	if addr > target {
-		return 0, emptyLabelOutput, errors.New(".org directive cannot change PC backwards")
-	}
-	return target, emptyLabelOutput, nil
+	return d.address * (ctx.ByteSize() / 8), emptyLabelOutput, nil
 }
 
 func (d *DirectiveOrg) IsAddressInvariant() bool {
